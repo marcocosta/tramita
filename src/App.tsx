@@ -190,6 +190,22 @@ function OverviewScreen() {
             </Badge>
           </div>
 
+          <div className="mt-6 grid max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3">
+            {[
+              ["Transações", "+42 ativas"],
+              ["Tempo médio", "23 dias"],
+              ["Risco alto", "5 casos"],
+            ].map(([label, value]) => (
+              <div
+                key={label}
+                className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 shadow-sm"
+              >
+                <div className="text-[11px] uppercase tracking-[0.16em] text-slate-400">{label}</div>
+                <div className="mt-1 text-sm font-semibold text-slate-900">{value}</div>
+              </div>
+            ))}
+          </div>
+
           <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-4">
             {[
               ["Etapa atual", "Financiamento"],
@@ -239,10 +255,10 @@ function OverviewScreen() {
 
         <ShellCard className="p-6">
           <div className="text-lg font-semibold tracking-tight text-slate-950">
-            Sinais de confiança
+            Por que investidores entendem rápido
           </div>
           <div className="mt-1 text-sm text-slate-500">
-            O que reduz surpresa na transação
+            O que torna o processo mais confiável e mensurável
           </div>
 
           <div className="mt-5 space-y-3">
@@ -287,8 +303,8 @@ function OverviewScreen() {
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <ShellCard className="p-6">
-          <div className="text-lg font-semibold tracking-tight text-slate-950">Próximos marcos</div>
-          <div className="mt-1 text-sm text-slate-500">Fluxo previsível da transação</div>
+          <div className="text-lg font-semibold tracking-tight text-slate-950">Fluxo da transação</div>
+          <div className="mt-1 text-sm text-slate-500">Cada avanço tem responsável e estado claro</div>
 
           <div className="mt-5 space-y-3">
             {steps.map((step) => (
@@ -316,8 +332,8 @@ function OverviewScreen() {
         </ShellCard>
 
         <ShellCard className="p-6">
-          <div className="text-lg font-semibold tracking-tight text-slate-950">Atividade recente</div>
-          <div className="mt-1 text-sm text-slate-500">Transparência operacional em tempo real</div>
+          <div className="text-lg font-semibold tracking-tight text-slate-950">Feed operacional</div>
+          <div className="mt-1 text-sm text-slate-500">Registro vivo do que aconteceu e do que está travando</div>
 
           <div className="mt-5 space-y-3">
             {activities.map((a, i) => (
@@ -554,7 +570,7 @@ export default function App() {
               <div className="max-w-3xl">
                 <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-1 text-sm text-slate-600 shadow-sm">
                   <ShieldCheck className="h-4 w-4" />
-                  Transparency · Determinism · Reliability
+                  Transaction intelligence for real estate
                 </div>
 
                 <h1 className="mt-5 text-4xl font-semibold tracking-tight text-slate-950 md:text-6xl">
@@ -562,8 +578,8 @@ export default function App() {
                 </h1>
 
                 <p className="mt-4 max-w-2xl text-base leading-relaxed text-slate-600 md:text-lg">
-                  Um protótipo de plataforma para tornar a transação imobiliária visível,
-                  previsível e confiável — com etapas, documentos, responsáveis e pendências
+                  A camada de transação para o mercado imobiliário — feita para tornar cada negócio
+                  visível, previsível e confiável, com etapas, documentos, responsáveis e pendências
                   em um único fluxo.
                 </p>
               </div>
@@ -608,16 +624,16 @@ export default function App() {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {[
               {
-                title: "Por que existe",
-                text: "Porque a maior dor não é só buscar imóvel. É atravessar a transação sem ruído, sem opacidade e sem surpresa.",
+                title: "Por que importa",
+                text: "A dor central não é apenas captar ou buscar imóvel. É atravessar a transação com pouca clareza, múltiplos agentes e risco de surpresa.",
               },
               {
-                title: "Diferencial",
-                text: "Progresso determinístico por marcos, donos, documentos e evidências — não apenas CRM ou comunicação dispersa.",
+                title: "O que muda",
+                text: "Tramita organiza o negócio por marcos, responsáveis, documentos e evidências — criando uma visão única do que falta e do que já foi validado.",
               },
               {
-                title: "Uso na demo",
-                text: "Clique nas seções para mostrar ao investidor como Tramita organiza a jornada do negócio ao fechamento.",
+                title: "Como apresentar",
+                text: "Comece por Visão da transação. Depois mostre linha do tempo, documentos e partes para reforçar controle, previsibilidade e confiança.",
               },
             ].map((item) => (
               <div key={item.title} className="rounded-3xl border border-slate-200 bg-slate-50/80 p-5">
