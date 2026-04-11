@@ -570,7 +570,7 @@ export default function App() {
               <div className="max-w-3xl">
                 <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-1 text-sm text-slate-600 shadow-sm">
                   <ShieldCheck className="h-4 w-4" />
-                  Transaction intelligence for real estate
+                  Transação inteligente para o mercado imobiliário.
                 </div>
 
                 <h1 className="mt-5 text-4xl font-semibold tracking-tight text-slate-950 md:text-6xl">
