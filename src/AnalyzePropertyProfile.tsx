@@ -6,15 +6,12 @@ import {
   Building2,
   CalendarClock,
   CheckCircle2,
-  ChevronRight,
-  CircleDollarSign,
   FileText,
   LandPlot,
   Layers3,
   MapPin,
   Search,
   ShieldCheck,
-  TrendingUp,
   Upload,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
