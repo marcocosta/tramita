@@ -112,7 +112,7 @@ export default function TramitaAnalyzePropertyProfile() {
           </div>
         </motion.header>
 
-        <ShellCard className="relative overflow-hidden p-6 md:p-8">
+        <ShellCard className="relative overflow-hidden p-5 md:p-7">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(180,83,9,0.06),transparent_23%),radial-gradient(circle_at_90%_10%,rgba(15,23,42,0.06),transparent_25%)]" />
           <div className="relative grid grid-cols-1 gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
             <div>
@@ -140,34 +140,56 @@ export default function TramitaAnalyzePropertyProfile() {
               ))}
             </div>
           </div>
+
+          <div className="relative mt-5 rounded-[26px] border border-slate-200 bg-white/88 p-4 shadow-sm backdrop-blur">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-800">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Tramita insight</div>
+                <div className="mt-1 text-lg font-semibold tracking-tight text-slate-950">Oportunidade promissora, com validação documental pendente.</div>
+                <p className="mt-2 max-w-4xl text-sm leading-relaxed text-slate-600">
+                  Valor e potencial urbanístico parecem defensáveis, mas matrícula, IPTU e parâmetros oficiais ainda precisam ser confirmados antes de uma oferta vinculante.
+                </p>
+              </div>
+            </div>
+          </div>
         </ShellCard>
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           <main className="space-y-6">
             <ShellCard className="overflow-hidden">
               <div className="grid grid-cols-1 lg:grid-cols-[1.45fr_0.55fr]">
-                <div className="relative min-h-[380px] overflow-hidden bg-slate-900">
+                <div className="relative min-h-[350px] overflow-hidden bg-slate-900">
                   <div className="absolute inset-0 opacity-95 bg-[linear-gradient(135deg,#dbeafe_0%,#f8fafc_34%,#e2e8f0_35%,#f8fafc_40%,#bfdbfe_100%)]" />
+                  <div className="absolute left-0 top-[34%] h-4 w-full rotate-[-7deg] bg-white/55 shadow-sm" />
+                  <div className="absolute bottom-[22%] left-[6%] h-3 w-[92%] rotate-[8deg] bg-slate-200/65" />
+                  <div className="absolute left-[64%] top-0 h-full w-4 rotate-[15deg] bg-blue-100/70" />
                   <div className="absolute left-[18%] top-[14%] h-[70%] w-[58%] rotate-[-8deg] rounded-[36px] border-2 border-slate-950/60 bg-white/25 shadow-[0_0_0_999px_rgba(15,23,42,0.05)]" />
                   <div className="absolute left-[42%] top-[45%] flex h-12 w-12 items-center justify-center rounded-full bg-slate-950 text-white shadow-xl">
                     <MapPin className="h-5 w-5" />
                   </div>
+                  <div className="absolute left-[22%] top-[19%] rounded-full border border-slate-300 bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">Perímetro preliminar</div>
+                  <div className="absolute right-[9%] top-[31%] rounded-full border border-blue-100 bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">Eixo comercial próximo</div>
+                  <div className="absolute left-[10%] bottom-[28%] rounded-full border border-amber-100 bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">Zona a confirmar</div>
+                  <div className="absolute right-[12%] bottom-[18%] rounded-full border border-emerald-100 bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">Comparáveis próximos</div>
                   <div className="absolute bottom-5 left-5 rounded-2xl border border-white/60 bg-white/85 px-4 py-3 shadow-sm backdrop-blur">
                     <div className="text-sm font-semibold text-slate-950">Meireles · Fortaleza</div>
                     <div className="text-xs text-slate-500">Mapa conceitual · perímetro aproximado</div>
                   </div>
-                  <div className="absolute right-5 top-5 rounded-full border border-white/70 bg-white/85 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">Zoning overlay preview</div>
+                  <div className="absolute right-5 top-5 rounded-full border border-white/70 bg-white/85 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">Camada urbana preliminar</div>
                 </div>
 
                 <div className="space-y-3 p-4">
                   {[
-                    { icon: LandPlot, title: "Perímetro do lote", text: "Boundary preliminar" },
-                    { icon: Building2, title: "Entorno ativo", text: "Novos empreendimentos próximos" },
-                    { icon: Layers3, title: "Plano diretor", text: "Parâmetros a confirmar" },
+                    { icon: LandPlot, title: "Perímetro do lote", text: "Leitura preliminar, sujeita à matrícula" },
+                    { icon: Building2, title: "Entorno ativo", text: "Eixo comercial e novos empreendimentos" },
+                    { icon: Layers3, title: "Plano Diretor", text: "Coeficiente, uso e recuos a confirmar" },
                   ].map((item) => {
                     const Icon = item.icon;
                     return (
-                      <div key={item.title} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                      <div key={item.title} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5">
                         <div className="flex gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white">
                             <Icon className="h-5 w-5 text-slate-700" />
@@ -188,7 +210,7 @@ export default function TramitaAnalyzePropertyProfile() {
               <SectionTitle eyebrow="Property facts" title="Dados principais" description="Informações base para leitura de valor, potencial e risco." />
               <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
                 {facts.map(([label, value]) => (
-                  <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                  <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-none">
                     <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{label}</div>
                     <div className="mt-2 text-sm font-semibold text-slate-950">{value}</div>
                   </div>
@@ -198,7 +220,7 @@ export default function TramitaAnalyzePropertyProfile() {
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <ShellCard className="p-6">
-                <SectionTitle eyebrow="Value" title="Valor estimado" description="Faixa defensável, não número absoluto." />
+                <SectionTitle eyebrow="Primary insight" title="Valor estimado" description="Faixa defensável, não número absoluto." />
                 <div className="mt-6 rounded-[26px] border border-slate-200 bg-gradient-to-b from-white to-slate-50/80 p-5">
                   <div className="text-sm text-slate-500">Faixa estimada</div>
                   <div className="mt-2 text-4xl font-semibold tracking-tight text-slate-950">R$ 2,8M – R$ 3,4M</div>
@@ -220,7 +242,7 @@ export default function TramitaAnalyzePropertyProfile() {
                 <SectionTitle eyebrow="Market context" title="Contexto de mercado" description="Leitura rápida de liquidez e referência de preço." />
                 <div className="mt-5 space-y-3">
                   {comparables.map((item) => (
-                    <div key={item.name} className="grid grid-cols-[1fr_auto] gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+                    <div key={item.name} className="grid grid-cols-[1fr_auto] gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                       <div>
                         <div className="font-semibold text-slate-950">{item.name}</div>
                         <div className="mt-1 text-sm text-slate-500">{item.distance} · {item.area} · {item.price}</div>
@@ -233,20 +255,20 @@ export default function TramitaAnalyzePropertyProfile() {
             </div>
 
             <ShellCard className="p-6">
-              <SectionTitle eyebrow="Potential" title="Potencial urbanístico" description="O que o ativo pode se tornar, sujeito à confirmação urbanística." />
+              <SectionTitle eyebrow="Primary insight" title="Potencial urbanístico" description="O que o ativo pode se tornar, sujeito à confirmação urbanística." />
               <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[0.8fr_1.2fr]">
                 <div className="rounded-[26px] border border-emerald-200 bg-emerald-50 p-5">
                   <div className="text-sm text-emerald-700">Potencial preliminar</div>
                   <div className="mt-2 text-3xl font-semibold tracking-tight text-emerald-950">Alto</div>
                   <p className="mt-3 text-sm leading-relaxed text-emerald-800">
-                    Compatível com tese de incorporação residencial ou uso misto, condicionado à validação dos parâmetros legais.
+                    Compatível com tese de incorporação residencial ou uso misto, sujeito à confirmação do Plano Diretor e dos parâmetros municipais.
                   </p>
                 </div>
                 <div className="space-y-3">
                   {[
-                    "Lote compatível com incorporação em área urbana consolidada.",
-                    "Entorno indica demanda por verticalização residencial e serviços.",
-                    "Confirmar recuos, coeficiente de aproveitamento, taxa de ocupação e altura máxima.",
+                    "Lote compatível com incorporação em área urbana consolidada, sujeito à confirmação de uso permitido.",
+                    "Entorno indica demanda por verticalização residencial e serviços, com liquidez acima da média local.",
+                    "Validar coeficiente de aproveitamento, taxa de ocupação, recuos e altura máxima antes de precificar uma tese vinculante.",
                   ].map((item) => (
                     <div key={item} className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-4">
                       <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
@@ -261,7 +283,7 @@ export default function TramitaAnalyzePropertyProfile() {
               <SectionTitle eyebrow="Risk" title="Sinais de risco e validação" description="Separando problema encontrado, dado pendente e sinal favorável." />
               <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
                 {riskSignals.map((risk) => (
-                  <div key={risk.label} className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <div key={risk.label} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="font-semibold text-slate-950">{risk.label}</div>
                       <ToneBadge tone={risk.tone as "green" | "amber" | "slate"}>{risk.status}</ToneBadge>
@@ -273,7 +295,7 @@ export default function TramitaAnalyzePropertyProfile() {
             </ShellCard>
           </main>
 
-          <aside className="space-y-6 xl:sticky xl:top-8">
+          <aside className="space-y-6 lg:sticky lg:top-8">
             <ShellCard className="p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -306,21 +328,26 @@ export default function TramitaAnalyzePropertyProfile() {
               <SectionTitle title="Dados necessários" description="Itens que aumentam a confiança da análise." />
               <div className="mt-5 space-y-3">
                 {[
-                  { icon: FileText, label: "Matrícula atualizada", action: "Anexar" },
-                  { icon: Building2, label: "Cadastro/IPTU municipal", action: "Consultar" },
-                  { icon: Layers3, label: "Parâmetros urbanísticos", action: "Validar" },
+                  { icon: FileText, label: "Matrícula atualizada", subtitle: "Valida titularidade, ônus e histórico dominial", impact: "Alto", tone: "amber" as const, action: "Anexar" },
+                  { icon: Building2, label: "Cadastro/IPTU municipal", subtitle: "Confirma situação fiscal e vínculo cadastral", impact: "Médio", tone: "slate" as const, action: "Consultar" },
+                  { icon: Layers3, label: "Parâmetros urbanísticos", subtitle: "Confirma coeficiente, uso permitido, recuos e altura", impact: "Alto", tone: "amber" as const, action: "Validar" },
                 ].map((item) => {
                   const Icon = item.icon;
                   return (
-                    <div key={item.label} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50">
+                    <div key={item.label} className="rounded-2xl border border-slate-200 bg-white p-3">
+                      <div className="flex items-start gap-2.5">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50">
                         <Icon className="h-5 w-5 text-slate-600" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium text-slate-950">{item.label}</div>
-                        <div className="text-xs text-slate-500">Pendente</div>
+                        <div className="text-sm font-medium text-slate-950">{item.label}</div>
+                        <div className="mt-0.5 text-xs leading-relaxed text-slate-500">{item.subtitle}</div>
+                        <div className="mt-2">
+                          <ToneBadge tone={item.tone}>Impacto: {item.impact}</ToneBadge>
+                        </div>
                       </div>
-                      <Button variant="ghost" className="rounded-xl px-3 text-xs">{item.action}</Button>
+                      <Button variant="ghost" className="shrink-0 rounded-xl px-2.5 text-xs">{item.action}</Button>
+                      </div>
                     </div>
                   );
                 })}
