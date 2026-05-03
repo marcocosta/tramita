@@ -141,8 +141,14 @@ export default function App() {
       </header>
 
       <main>
-        {active === "discover" && <DiscoverOpportunityDetail />}
-        {active === "analyze" && <AnalyzePropertyProfile />}
+        {active === "discover" && (
+          <DiscoverOpportunityDetail onAnalyze={() => setActive("analyze")} />
+        )}
+        {active === "analyze" && (
+          <AnalyzePropertyProfile
+            onStartDueDiligence={() => setActive("transact")}
+          />
+        )}
         {active === "transact" && <TransactCommandCenter />}
       </main>
     </div>

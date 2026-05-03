@@ -1,5 +1,4 @@
 import React from "react";
-import { motion } from "framer-motion";
 import {
   AlertTriangle,
   ArrowRight,
@@ -10,14 +9,12 @@ import {
   LandPlot,
   Layers3,
   MapPin,
-  Search,
   ShieldCheck,
   Upload,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Input } from "@/components/ui/input";
 
 const facts = [
   ["Área", "1.240 m²"],
@@ -84,34 +81,16 @@ function ScoreRow({ label, value, progress }: { label: string; value: string; pr
   );
 }
 
-export default function TramitaAnalyzePropertyProfile() {
+type AnalyzePropertyProfileProps = {
+  onStartDueDiligence?: () => void;
+};
+
+export default function TramitaAnalyzePropertyProfile({
+  onStartDueDiligence,
+}: AnalyzePropertyProfileProps) {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.07),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-5 md:px-8 md:py-8">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.07),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-4 md:px-8 md:py-6">
       <div className="mx-auto max-w-[1480px] space-y-6">
-        <motion.header
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
-          className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-sm font-semibold text-white shadow-sm">T</div>
-            <div>
-              <div className="text-lg font-semibold tracking-tight text-slate-950">Tramita</div>
-              <div className="text-sm text-slate-500">Property intelligence profile</div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative min-w-[300px]">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <Input className="h-11 rounded-2xl border-slate-200 bg-white/95 pl-10 shadow-sm" value="Terreno em Meireles, Fortaleza" readOnly />
-            </div>
-            <Button variant="outline" className="h-11 rounded-2xl border-slate-200 bg-white">Salvar análise</Button>
-            <Button className="h-11 rounded-2xl bg-slate-950 px-5 text-white hover:bg-slate-900">Iniciar due diligence</Button>
-          </div>
-        </motion.header>
-
         <ShellCard className="relative overflow-hidden p-5 md:p-7">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(180,83,9,0.06),transparent_23%),radial-gradient(circle_at_90%_10%,rgba(15,23,42,0.06),transparent_25%)]" />
           <div className="relative grid grid-cols-1 gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
@@ -365,7 +344,10 @@ export default function TramitaAnalyzePropertyProfile() {
                 </div>
               </div>
               <div className="mt-5 space-y-3">
-                <Button className="h-12 w-full rounded-2xl bg-slate-950 text-white hover:bg-slate-900">
+                <Button
+                  className="h-12 w-full rounded-2xl bg-slate-950 text-white hover:bg-slate-900"
+                  onClick={onStartDueDiligence}
+                >
                   Iniciar due diligence
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>

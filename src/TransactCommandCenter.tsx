@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { motion } from "framer-motion";
 import {
   AlertTriangle,
   ArrowRight,
@@ -11,7 +10,6 @@ import {
   FileText,
   Landmark,
   MapPin,
-  Search,
   ShieldCheck,
   Upload,
   Users,
@@ -20,7 +18,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Input } from "@/components/ui/input";
 
 const stages = [
   {
@@ -295,49 +292,8 @@ function ScoreRow({
 
 export default function TransactCommandCenter() {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.07),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-5 md:px-8 md:py-8">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.07),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-4 md:px-8 md:py-6">
       <div className="mx-auto max-w-[1480px] space-y-6">
-        <motion.header
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
-          className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-sm font-semibold text-white shadow-sm">
-              T
-            </div>
-            <div>
-              <div className="text-lg font-semibold tracking-tight text-slate-950">
-                Tramita
-              </div>
-              <div className="text-sm text-slate-500">
-                Transaction command center
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative min-w-[300px]">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <Input
-                className="h-11 rounded-2xl border-slate-200 bg-white/95 pl-10 shadow-sm"
-                value="TR-2041 · Compra de terreno em Meireles"
-                readOnly
-              />
-            </div>
-            <Button
-              variant="outline"
-              className="h-11 rounded-2xl border-slate-200 bg-white"
-            >
-              Gerar relatório
-            </Button>
-            <Button className="h-11 rounded-2xl bg-slate-950 px-5 text-white hover:bg-slate-900">
-              Resolver próxima pendência
-            </Button>
-          </div>
-        </motion.header>
-
         <ShellCard className="relative overflow-hidden p-6 md:p-8">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(180,83,9,0.06),transparent_23%),radial-gradient(circle_at_90%_10%,rgba(15,23,42,0.06),transparent_25%)]" />
           <div className="relative">

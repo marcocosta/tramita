@@ -1,12 +1,10 @@
 import React from "react";
-import { motion } from "framer-motion";
 import {
   AlertTriangle,
   ArrowRight,
   BookmarkPlus,
   Building2,
   CheckCircle2,
-  Filter,
   LandPlot,
   Layers3,
   MapPin,
@@ -19,7 +17,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Input } from "@/components/ui/input";
 
 const candidates = [
   {
@@ -195,52 +192,16 @@ function ScoreRow({
   );
 }
 
-export default function DiscoverOpportunityDetail() {
+type DiscoverOpportunityDetailProps = {
+  onAnalyze?: () => void;
+};
+
+export default function DiscoverOpportunityDetail({
+  onAnalyze,
+}: DiscoverOpportunityDetailProps) {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.07),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-5 md:px-8 md:py-8">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.07),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-4 md:px-8 md:py-6">
       <div className="mx-auto max-w-[1480px] space-y-6">
-        <motion.header
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
-          className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-sm font-semibold text-white shadow-sm">
-              T
-            </div>
-            <div>
-              <div className="text-lg font-semibold tracking-tight text-slate-950">
-                Tramita
-              </div>
-              <div className="text-sm text-slate-500">
-                Opportunity sourcing cockpit
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative min-w-[320px]">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <Input
-                className="h-11 rounded-2xl border-slate-200 bg-white/95 pl-10 shadow-sm"
-                value="Terrenos 800–2.000 m² · Fortaleza"
-                readOnly
-              />
-            </div>
-            <Button
-              variant="outline"
-              className="h-11 rounded-2xl border-slate-200 bg-white"
-            >
-              <Filter className="mr-2 h-4 w-4" />
-              Ajustar tese
-            </Button>
-            <Button className="h-11 rounded-2xl bg-slate-950 px-5 text-white hover:bg-slate-900">
-              Nova busca
-            </Button>
-          </div>
-        </motion.header>
-
         <ShellCard className="relative overflow-hidden p-6 md:p-7">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(180,83,9,0.06),transparent_23%),radial-gradient(circle_at_90%_10%,rgba(15,23,42,0.06),transparent_25%)]" />
           <div className="relative grid grid-cols-1 gap-6 lg:grid-cols-[1fr_0.9fr] lg:items-end">
@@ -312,14 +273,17 @@ export default function DiscoverOpportunityDetail() {
                       ))}
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-3 rounded-[24px] border border-slate-200 bg-white p-3">
+                  <div className="grid grid-cols-3 gap-2">
                     {[
                       ["Candidatos", "12"],
                       ["Shortlist", "3"],
                       ["Melhor fit", "86"],
                     ].map(([label, value]) => (
-                      <div key={label}>
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      <div
+                        key={label}
+                        className="min-w-0 rounded-2xl border border-slate-200 bg-white px-2 py-3 text-center shadow-sm"
+                      >
+                        <div className="break-words text-[10px] font-semibold uppercase leading-tight tracking-[0] text-slate-400">
                           {label}
                         </div>
                         <div className="mt-1 text-lg font-semibold text-slate-950">
@@ -523,6 +487,29 @@ export default function DiscoverOpportunityDetail() {
                     <div
                       key={item.title}
                       className="rounded-[24px] border border-slate-200 bg-white p-5"
+                      onClick={
+                        item.title === "Analisar ativo" ? onAnalyze : undefined
+                      }
+                      onKeyDown={(event) => {
+                        if (
+                          item.title === "Analisar ativo" &&
+                          onAnalyze &&
+                          (event.key === "Enter" || event.key === " ")
+                        ) {
+                          event.preventDefault();
+                          onAnalyze();
+                        }
+                      }}
+                      role={
+                        item.title === "Analisar ativo" && onAnalyze
+                          ? "button"
+                          : undefined
+                      }
+                      tabIndex={
+                        item.title === "Analisar ativo" && onAnalyze
+                          ? 0
+                          : undefined
+                      }
                     >
                       <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-50">
                         <Icon className="h-5 w-5 text-slate-700" />
@@ -608,7 +595,10 @@ export default function DiscoverOpportunityDetail() {
                   </div>
                 </div>
                 <div className="mt-5 space-y-3">
-                  <Button className="h-12 w-full rounded-2xl bg-slate-950 text-white hover:bg-slate-900">
+                  <Button
+                    className="h-12 w-full rounded-2xl bg-slate-950 text-white hover:bg-slate-900"
+                    onClick={onAnalyze}
+                  >
                     Analisar este ativo
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
