@@ -207,7 +207,7 @@ export default function DiscoverOpportunityDetail({
           <div className="relative grid grid-cols-1 gap-6 lg:grid-cols-[1fr_0.9fr] lg:items-end">
             <div>
               <div className="flex flex-wrap gap-2">
-                <ToneBadge tone="blue">Discover</ToneBadge>
+                <ToneBadge tone="blue">Descobrir</ToneBadge>
                 <ToneBadge tone="green">3 ativos priorizados</ToneBadge>
                 <ToneBadge tone="amber">
                   Validação documental pendente
@@ -253,7 +253,7 @@ export default function DiscoverOpportunityDetail({
                 <div className="flex flex-col justify-between gap-5 p-5 md:p-6">
                   <div>
                     <SectionTitle
-                      eyebrow="Search thesis"
+                    eyebrow="Tese de busca"
                       title="Tese de busca"
                       description="Critérios usados para ranquear os ativos encontrados."
                     />
@@ -330,7 +330,7 @@ export default function DiscoverOpportunityDetail({
 
             <ShellCard className="p-5 md:p-6">
               <SectionTitle
-                eyebrow="Ranked candidates"
+                eyebrow="Ranking"
                 title="Oportunidades encontradas"
                 description="Ativos priorizados pela tese de busca e pelos sinais preliminares."
               />
@@ -411,7 +411,7 @@ export default function DiscoverOpportunityDetail({
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
               <ShellCard className="p-6">
                 <SectionTitle
-                  eyebrow="Selected opportunity"
+                  eyebrow="Oportunidade selecionada"
                   title="Por que Meireles foi priorizado"
                   description="Leitura inicial da tese de investimento."
                 />
@@ -432,7 +432,7 @@ export default function DiscoverOpportunityDetail({
 
               <ShellCard className="p-6">
                 <SectionTitle
-                  eyebrow="Early validation"
+                  eyebrow="Validação inicial"
                   title="Sinais preliminares"
                   description="O que já parece favorável e o que ainda precisa ser validado."
                 />
@@ -532,7 +532,7 @@ export default function DiscoverOpportunityDetail({
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Opportunity fit scorecard
+                    Scorecard da oportunidade
                   </div>
                   <div className="mt-1 text-xl font-semibold tracking-tight text-slate-950">
                     Meireles lidera a shortlist

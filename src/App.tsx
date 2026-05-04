@@ -2,16 +2,19 @@ import { useState } from "react";
 import {
   ArrowRight,
   Building2,
+  FileText,
   Radar,
   SearchCheck,
   ShieldCheck,
 } from "lucide-react";
 
+import HomeStoryLayer from "./HomeStoryLayer";
 import DiscoverOpportunityDetail from "./DiscoverOpportunityDetail";
 import AnalyzePropertyProfile from "./AnalyzePropertyProfile";
 import TransactCommandCenter from "./TransactCommandCenter";
+import InvestorMemoReport from "./InvestorMemoReport";
 
-type ActiveScreen = "discover" | "analyze" | "transact";
+type ActiveScreen = "home" | "discover" | "analyze" | "transact" | "reports";
 
 const navItems: Array<{
   key: ActiveScreen;
@@ -19,24 +22,34 @@ const navItems: Array<{
   description: string;
 }> = [
   {
+    key: "home",
+    label: "Início",
+    description: "Visão geral",
+  },
+  {
     key: "discover",
-    label: "Discover",
-    description: "Find opportunities",
+    label: "Descobrir",
+    description: "Buscar oportunidades",
   },
   {
     key: "analyze",
-    label: "Analyze",
-    description: "Value, potential, risk",
+    label: "Analisar",
+    description: "Valor, potencial e risco",
   },
   {
     key: "transact",
-    label: "Transact",
-    description: "Diligence and closing",
+    label: "Tramitar",
+    description: "Diligência e fechamento",
+  },
+  {
+    key: "reports",
+    label: "Relatórios",
+    description: "Memorando",
   },
 ];
 
 export default function App() {
-  const [active, setActive] = useState<ActiveScreen>("discover");
+  const [active, setActive] = useState<ActiveScreen>("home");
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -51,13 +64,13 @@ export default function App() {
                 Tramita
               </div>
               <div className="text-sm text-slate-500">
-                Real estate intelligence platform
+                Plataforma de inteligência imobiliária
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="flex overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-1 shadow-sm">
+          <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="flex max-w-full gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50 p-1 shadow-sm">
               {navItems.map((item) => {
                 const selected = active === item.key;
 
@@ -65,7 +78,7 @@ export default function App() {
                   <button
                     key={item.key}
                     onClick={() => setActive(item.key)}
-                    className={`min-w-[128px] rounded-xl px-4 py-2 text-left transition ${
+                    className={`min-w-[112px] rounded-xl px-3 py-2 text-left transition ${
                       selected
                         ? "bg-slate-950 text-white shadow-sm"
                         : "text-slate-600 hover:bg-white hover:text-slate-950"
@@ -98,7 +111,7 @@ export default function App() {
                 }
                 type="button"
               >
-                Discover
+                Descobrir
               </button>
             </div>
 
@@ -113,7 +126,7 @@ export default function App() {
                 }
                 type="button"
               >
-                Analyze
+                Analisar
               </button>
             </div>
 
@@ -128,19 +141,40 @@ export default function App() {
                 }
                 type="button"
               >
-                Transact
+                Tramitar
+              </button>
+            </div>
+
+            <ArrowRight className="h-4 w-4 shrink-0 text-slate-400" />
+
+            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-600 shadow-sm">
+              <FileText className="h-4 w-4" />
+              <button
+                onClick={() => setActive("reports")}
+                className={
+                  active === "reports" ? "font-semibold text-slate-950" : ""
+                }
+                type="button"
+              >
+                Relatório
               </button>
             </div>
 
             <div className="ml-auto hidden items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-500 md:flex">
               <Building2 className="h-4 w-4" />
-              Fortaleza pilot flow
+              Fluxo piloto Fortaleza
             </div>
           </div>
         </div>
       </header>
 
       <main>
+        {active === "home" && (
+          <HomeStoryLayer
+            onOpenPilot={() => setActive("discover")}
+            onViewReport={() => setActive("reports")}
+          />
+        )}
         {active === "discover" && (
           <DiscoverOpportunityDetail onAnalyze={() => setActive("analyze")} />
         )}
@@ -150,6 +184,7 @@ export default function App() {
           />
         )}
         {active === "transact" && <TransactCommandCenter />}
+        {active === "reports" && <InvestorMemoReport />}
       </main>
     </div>
   );

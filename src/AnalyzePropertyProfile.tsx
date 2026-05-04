@@ -186,7 +186,7 @@ export default function TramitaAnalyzePropertyProfile({
             </ShellCard>
 
             <ShellCard className="p-6">
-              <SectionTitle eyebrow="Property facts" title="Dados principais" description="Informações base para leitura de valor, potencial e risco." />
+              <SectionTitle eyebrow="Dados do imóvel" title="Dados principais" description="Informações base para leitura de valor, potencial e risco." />
               <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
                 {facts.map(([label, value]) => (
                   <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 shadow-none">
@@ -199,7 +199,7 @@ export default function TramitaAnalyzePropertyProfile({
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <ShellCard className="p-6">
-                <SectionTitle eyebrow="Primary insight" title="Valor estimado" description="Faixa defensável, não número absoluto." />
+                <SectionTitle eyebrow="Insight principal" title="Valor estimado" description="Faixa defensável, não número absoluto." />
                 <div className="mt-6 rounded-[26px] border border-slate-200 bg-gradient-to-b from-white to-slate-50/80 p-5">
                   <div className="text-sm text-slate-500">Faixa estimada</div>
                   <div className="mt-2 text-4xl font-semibold tracking-tight text-slate-950">R$ 2,8M – R$ 3,4M</div>
@@ -218,7 +218,7 @@ export default function TramitaAnalyzePropertyProfile({
               </ShellCard>
 
               <ShellCard className="p-6">
-                <SectionTitle eyebrow="Market context" title="Contexto de mercado" description="Leitura rápida de liquidez e referência de preço." />
+                <SectionTitle eyebrow="Contexto" title="Contexto de mercado" description="Leitura rápida de liquidez e referência de preço." />
                 <div className="mt-5 space-y-3">
                   {comparables.map((item) => (
                     <div key={item.name} className="grid grid-cols-[1fr_auto] gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
@@ -234,7 +234,7 @@ export default function TramitaAnalyzePropertyProfile({
             </div>
 
             <ShellCard className="p-6">
-              <SectionTitle eyebrow="Primary insight" title="Potencial urbanístico" description="O que o ativo pode se tornar, sujeito à confirmação urbanística." />
+              <SectionTitle eyebrow="Insight principal" title="Potencial urbanístico" description="O que o ativo pode se tornar, sujeito à confirmação urbanística." />
               <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[0.8fr_1.2fr]">
                 <div className="rounded-[26px] border border-emerald-200 bg-emerald-50 p-5">
                   <div className="text-sm text-emerald-700">Potencial preliminar</div>
@@ -259,7 +259,7 @@ export default function TramitaAnalyzePropertyProfile({
             </ShellCard>
 
             <ShellCard className="p-6">
-              <SectionTitle eyebrow="Risk" title="Sinais de risco e validação" description="Separando problema encontrado, dado pendente e sinal favorável." />
+              <SectionTitle eyebrow="Risco" title="Sinais de risco e validação" description="Separando problema encontrado, dado pendente e sinal favorável." />
               <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
                 {riskSignals.map((risk) => (
                   <div key={risk.label} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">

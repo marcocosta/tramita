@@ -359,7 +359,7 @@ export default function TransactCommandCenter() {
           <main className="space-y-6">
             <ShellCard className="p-5">
               <SectionTitle
-                eyebrow="Blockers"
+                eyebrow="Bloqueios"
                 title="O que está travando agora"
                 description="Fricções explícitas, com dono e próxima ação."
               />
@@ -425,7 +425,7 @@ export default function TransactCommandCenter() {
 
             <ShellCard className="p-5">
               <SectionTitle
-                eyebrow="Progress rail"
+                eyebrow="Fluxo"
                 title="Fluxo determinístico da transação"
                 description="Cada etapa com estado, responsável e evidência."
               />
@@ -494,7 +494,7 @@ export default function TransactCommandCenter() {
 
             <ShellCard className="p-5">
               <SectionTitle
-                eyebrow="Responsibilities"
+                eyebrow="Responsabilidades"
                 title="Matriz de responsabilidades"
                 description="Quem deve agir agora, e com qual status."
               />
@@ -534,7 +534,7 @@ export default function TransactCommandCenter() {
 
             <ShellCard className="p-5">
               <SectionTitle
-                eyebrow="Documents"
+                eyebrow="Documentos"
                 title="Prontidão documental"
                 description="Evidências por grupo, dono e status."
               />
@@ -583,7 +583,7 @@ export default function TransactCommandCenter() {
 
             <ShellCard className="p-5">
               <SectionTitle
-                eyebrow="Timeline"
+                eyebrow="Linha do tempo"
                 title="Registro auditável"
                 description="Tudo que aconteceu, quando e com qual impacto."
               />
@@ -658,7 +658,7 @@ export default function TransactCommandCenter() {
                 </div>
                 <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
                   <div className="text-xs uppercase tracking-[0.14em] text-red-600">
-                    Blockers críticos
+                    Bloqueios críticos
                   </div>
                   <div className="mt-1 font-semibold text-red-950">1</div>
                 </div>
