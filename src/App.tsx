@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   Building2,
@@ -13,8 +13,73 @@ import DiscoverOpportunityDetail from "./DiscoverOpportunityDetail";
 import AnalyzePropertyProfile from "./AnalyzePropertyProfile";
 import TransactCommandCenter from "./TransactCommandCenter";
 import InvestorMemoReport from "./InvestorMemoReport";
+import OperationsConsole from "./OperationsConsole";
+import PricingModelScreen from "./PricingModelScreen";
+import PropertyIntakeScreen from "./PropertyIntakeScreen";
+import { tramitaMockData } from "./data/tramitaMockData";
+import {
+  createOpportunityFromInput,
+  dossierRequestsStorageKey,
+  getPropertyForOpportunityId,
+  getSelectedAnalysisSummary,
+  getSelectedReportMemo,
+  getSelectedTransaction,
+  initialTramitaAppState,
+  isDossierRequested,
+  loadImportedOpportunities,
+  markDossierRequested,
+  saveImportedOpportunities,
+  selectOpportunity,
+  updateSearchThesis,
+  type ActiveScreen,
+  type DossierRequestStatusByPropertyId,
+  type TramitaAppState,
+} from "./state/tramitaAppState";
+import type { ImportedOpportunityInput, Opportunity } from "./types/tramita";
 
-type ActiveScreen = "home" | "discover" | "analyze" | "transact" | "reports";
+const validScreens: ActiveScreen[] = [
+  "home",
+  "discover",
+  "analyze",
+  "transact",
+  "reports",
+  "pricing",
+  "intake",
+  "operations",
+];
+
+function screenFromHash(hash: string): ActiveScreen | null {
+  const screen = hash.replace("#", "") as ActiveScreen;
+  return validScreens.includes(screen) ? screen : null;
+}
+
+function getInitialScreen(): ActiveScreen {
+  if (typeof window === "undefined") {
+    return "home";
+  }
+
+  return screenFromHash(window.location.hash) ?? "home";
+}
+
+function getStoredDossierRequests(): DossierRequestStatusByPropertyId {
+  if (typeof window === "undefined") {
+    return {};
+  }
+
+  try {
+    const stored = window.localStorage.getItem(dossierRequestsStorageKey);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+function getInitialAppState(): TramitaAppState {
+  return {
+    ...initialTramitaAppState,
+    dossierRequestStatusByPropertyId: getStoredDossierRequests(),
+  };
+}
 
 const navItems: Array<{
   key: ActiveScreen;
@@ -25,6 +90,11 @@ const navItems: Array<{
     key: "home",
     label: "Início",
     description: "Visão geral",
+  },
+  {
+    key: "intake",
+    label: "Entrada",
+    description: "Dados e uploads",
   },
   {
     key: "discover",
@@ -46,17 +116,152 @@ const navItems: Array<{
     label: "Relatórios",
     description: "Memorando",
   },
+  {
+    key: "pricing",
+    label: "Modelo",
+    description: "Pricing e receita",
+  },
+  {
+    key: "operations",
+    label: "Operações",
+    description: "Fila de dossiês",
+  },
 ];
 
 export default function App() {
-  const [active, setActive] = useState<ActiveScreen>("home");
+  const [active, setActive] = useState<ActiveScreen>(getInitialScreen);
+  const [appState, setAppState] =
+    useState<TramitaAppState>(getInitialAppState);
+  const [importedOpportunities, setImportedOpportunities] = useState<
+    Opportunity[]
+  >(loadImportedOpportunities);
+
+  const allDiscoverOpportunities = [
+    ...tramitaMockData.discover.candidates,
+    ...importedOpportunities,
+  ];
+  const selectedProperty = getPropertyForOpportunityId(
+    appState.selectedOpportunityId,
+    allDiscoverOpportunities,
+  );
+  const selectedAnalysisSummary = getSelectedAnalysisSummary(
+    selectedProperty.id,
+  );
+  const selectedTransaction = getSelectedTransaction(
+    appState.selectedTransactionId,
+  );
+  const selectedReportMemo = getSelectedReportMemo(selectedProperty.id);
+  const selectedDossierRequested = isDossierRequested(
+    appState.dossierRequestStatusByPropertyId,
+    selectedProperty.id,
+  );
+
+  function navigateTo(screen: ActiveScreen) {
+    setActive(screen);
+
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", `#${screen}`);
+    }
+  }
+
+  function handleSearchThesisChange(searchThesisText: string) {
+    setAppState((current) =>
+      updateSearchThesis(current, searchThesisText),
+    );
+  }
+
+  function handleSelectOpportunity(opportunityId: string) {
+    setAppState((current) =>
+      selectOpportunity(current, opportunityId, allDiscoverOpportunities),
+    );
+  }
+
+  function handleAnalyzeOpportunity(opportunityId?: string) {
+    if (opportunityId) {
+      setAppState((current) =>
+        selectOpportunity(current, opportunityId, allDiscoverOpportunities),
+      );
+    }
+
+    navigateTo("analyze");
+  }
+
+  function handleRequestDossier(propertyId: string, opportunityId?: string) {
+    setAppState((current) => {
+      const selectedState = opportunityId
+        ? selectOpportunity(current, opportunityId, allDiscoverOpportunities)
+        : current;
+      const nextState = markDossierRequested(selectedState, propertyId);
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(
+          dossierRequestsStorageKey,
+          JSON.stringify(nextState.dossierRequestStatusByPropertyId),
+        );
+      }
+
+      return nextState;
+    });
+  }
+
+  function persistImportedOpportunities(opportunities: Opportunity[]) {
+    setImportedOpportunities(opportunities);
+    saveImportedOpportunities(opportunities);
+  }
+
+  function handleAddImportedOpportunity(input: ImportedOpportunityInput) {
+    const opportunity = createOpportunityFromInput(input);
+    const nextOpportunities = [opportunity, ...importedOpportunities];
+
+    persistImportedOpportunities(nextOpportunities);
+    setAppState((current) =>
+      selectOpportunity(current, opportunity.id, [
+        ...tramitaMockData.discover.candidates,
+        ...nextOpportunities,
+      ]),
+    );
+  }
+
+  function handleImportOpportunities(inputs: ImportedOpportunityInput[]) {
+    const opportunities = inputs.map((input) => createOpportunityFromInput(input));
+    const nextOpportunities = [...opportunities, ...importedOpportunities];
+
+    persistImportedOpportunities(nextOpportunities);
+    if (opportunities[0]) {
+      setAppState((current) =>
+        selectOpportunity(current, opportunities[0].id, [
+          ...tramitaMockData.discover.candidates,
+          ...nextOpportunities,
+        ]),
+      );
+    }
+  }
+
+  function handleGoDiscover(opportunityId?: string) {
+    if (opportunityId) {
+      setAppState((current) =>
+        selectOpportunity(current, opportunityId, allDiscoverOpportunities),
+      );
+    }
+
+    navigateTo("discover");
+  }
+
+  useEffect(() => {
+    function handleHashChange() {
+      setActive(screenFromHash(window.location.hash) ?? "home");
+    }
+
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-100">
       <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1480px] flex-col gap-4 px-4 py-3 md:px-8 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mx-auto flex max-w-[1480px] flex-col gap-3 px-4 py-2 md:px-8 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-sm font-semibold text-white shadow-sm">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-950 text-sm font-semibold text-white shadow-sm">
               T
             </div>
             <div>
@@ -77,8 +282,8 @@ export default function App() {
                 return (
                   <button
                     key={item.key}
-                    onClick={() => setActive(item.key)}
-                    className={`min-w-[112px] rounded-xl px-3 py-2 text-left transition ${
+                    onClick={() => navigateTo(item.key)}
+                    className={`min-w-[112px] rounded-xl px-3 py-1.5 text-left transition ${
                       selected
                         ? "bg-slate-950 text-white shadow-sm"
                         : "text-slate-600 hover:bg-white hover:text-slate-950"
@@ -101,11 +306,11 @@ export default function App() {
         </div>
 
         <div className="border-t border-slate-200/70 bg-white/70">
-          <div className="mx-auto flex max-w-[1480px] items-center gap-2 overflow-x-auto px-4 py-2 text-sm md:px-8">
-            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-600 shadow-sm">
+          <div className="mx-auto flex max-w-[1480px] items-center gap-2 overflow-x-auto px-4 py-1.5 text-sm md:px-8">
+            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-600 shadow-sm">
               <Radar className="h-4 w-4" />
               <button
-                onClick={() => setActive("discover")}
+                onClick={() => navigateTo("discover")}
                 className={
                   active === "discover" ? "font-semibold text-slate-950" : ""
                 }
@@ -117,10 +322,10 @@ export default function App() {
 
             <ArrowRight className="h-4 w-4 shrink-0 text-slate-400" />
 
-            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-600 shadow-sm">
+            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-600 shadow-sm">
               <SearchCheck className="h-4 w-4" />
               <button
-                onClick={() => setActive("analyze")}
+                onClick={() => navigateTo("analyze")}
                 className={
                   active === "analyze" ? "font-semibold text-slate-950" : ""
                 }
@@ -132,10 +337,10 @@ export default function App() {
 
             <ArrowRight className="h-4 w-4 shrink-0 text-slate-400" />
 
-            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-600 shadow-sm">
+            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-600 shadow-sm">
               <ShieldCheck className="h-4 w-4" />
               <button
-                onClick={() => setActive("transact")}
+                onClick={() => navigateTo("transact")}
                 className={
                   active === "transact" ? "font-semibold text-slate-950" : ""
                 }
@@ -147,10 +352,10 @@ export default function App() {
 
             <ArrowRight className="h-4 w-4 shrink-0 text-slate-400" />
 
-            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-slate-600 shadow-sm">
+            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-600 shadow-sm">
               <FileText className="h-4 w-4" />
               <button
-                onClick={() => setActive("reports")}
+                onClick={() => navigateTo("reports")}
                 className={
                   active === "reports" ? "font-semibold text-slate-950" : ""
                 }
@@ -160,7 +365,7 @@ export default function App() {
               </button>
             </div>
 
-            <div className="ml-auto hidden items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-500 md:flex">
+            <div className="ml-auto hidden items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500 md:flex">
               <Building2 className="h-4 w-4" />
               Fluxo piloto Fortaleza
             </div>
@@ -171,20 +376,56 @@ export default function App() {
       <main>
         {active === "home" && (
           <HomeStoryLayer
-            onOpenPilot={() => setActive("discover")}
-            onViewReport={() => setActive("reports")}
+            onOpenPilot={() => navigateTo("discover")}
+            onViewReport={() => navigateTo("reports")}
+            onViewPricing={() => navigateTo("pricing")}
+            onGoAnalyze={() => navigateTo("analyze")}
+            onGoTransact={() => navigateTo("transact")}
+          />
+        )}
+        {active === "intake" && (
+          <PropertyIntakeScreen
+            importedOpportunities={importedOpportunities}
+            onAddOpportunity={handleAddImportedOpportunity}
+            onGoDiscover={handleGoDiscover}
+            onImportOpportunities={handleImportOpportunities}
           />
         )}
         {active === "discover" && (
-          <DiscoverOpportunityDetail onAnalyze={() => setActive("analyze")} />
+          <DiscoverOpportunityDetail
+            dossierRequestStatusByPropertyId={
+              appState.dossierRequestStatusByPropertyId
+            }
+            onAnalyze={handleAnalyzeOpportunity}
+            onRequestDossier={handleRequestDossier}
+            onSearchThesisChange={handleSearchThesisChange}
+            onSelectOpportunity={handleSelectOpportunity}
+            opportunities={allDiscoverOpportunities}
+            searchThesisText={appState.searchThesisText}
+            selectedOpportunityId={appState.selectedOpportunityId}
+          />
         )}
         {active === "analyze" && (
           <AnalyzePropertyProfile
-            onStartDueDiligence={() => setActive("transact")}
+            analysisSummary={selectedAnalysisSummary}
+            dossierRequested={selectedDossierRequested}
+            onRequestDossier={handleRequestDossier}
+            onStartDueDiligence={() => navigateTo("transact")}
+            selectedProperty={selectedProperty}
           />
         )}
-        {active === "transact" && <TransactCommandCenter />}
-        {active === "reports" && <InvestorMemoReport />}
+        {active === "transact" && (
+          <TransactCommandCenter transactionData={selectedTransaction} />
+        )}
+        {active === "reports" && (
+          <InvestorMemoReport
+            onOpenTransaction={() => navigateTo("transact")}
+            reportMemo={selectedReportMemo}
+            selectedProperty={selectedProperty}
+          />
+        )}
+        {active === "pricing" && <PricingModelScreen />}
+        {active === "operations" && <OperationsConsole />}
       </main>
     </div>
   );

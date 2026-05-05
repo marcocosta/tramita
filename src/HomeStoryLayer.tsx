@@ -3,6 +3,7 @@ import {
   ArrowRight,
   Building2,
   CheckCircle2,
+  Coins,
   FileText,
   Landmark,
   Layers3,
@@ -36,6 +37,45 @@ const problemCards = [
     title: "Baixa confiança na decisão",
     text: "É difícil saber se vale avançar com um ativo, se o preço é defensável e se a transação pode fechar com segurança.",
     icon: Target,
+  },
+];
+
+const dataSourceCards = [
+  {
+    source: "Cartório / matrícula",
+    status: "Pronto para receber",
+  },
+  {
+    source: "Prefeitura / IPTU",
+    status: "Integração futura",
+  },
+  {
+    source: "Plano Diretor",
+    status: "Integração futura",
+  },
+  {
+    source: "Corretor",
+    status: "Parceiro",
+  },
+  {
+    source: "Proprietário",
+    status: "Upload manual",
+  },
+  {
+    source: "Jurídico",
+    status: "Parceiro",
+  },
+  {
+    source: "Banco",
+    status: "Parceiro",
+  },
+  {
+    source: "Upload manual",
+    status: "Pronto para receber",
+  },
+  {
+    source: "API futura",
+    status: "Integração futura",
   },
 ];
 
@@ -136,18 +176,40 @@ function SectionTitle({
 type HomeStoryLayerProps = {
   onOpenPilot?: () => void;
   onViewReport?: () => void;
+  onViewPricing?: () => void;
+  onGoAnalyze?: () => void;
+  onGoTransact?: () => void;
 };
 
 export default function HomeStoryLayer({
   onOpenPilot,
   onViewReport,
+  onViewPricing,
+  onGoAnalyze,
+  onGoTransact,
 }: HomeStoryLayerProps) {
+  function getPillarAction(title: string) {
+    if (title === "Descobrir") {
+      return onOpenPilot;
+    }
+
+    if (title === "Analisar") {
+      return onGoAnalyze;
+    }
+
+    if (title === "Tramitar") {
+      return onGoTransact;
+    }
+
+    return undefined;
+  }
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.07),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-4 md:px-8 md:py-6">
       <div className="mx-auto max-w-[1480px] space-y-6">
-        <ShellCard className="relative overflow-hidden p-6 md:p-8">
+        <ShellCard className="relative overflow-hidden p-5 md:p-6">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_14%,rgba(180,83,9,0.07),transparent_24%),radial-gradient(circle_at_88%_4%,rgba(15,23,42,0.06),transparent_25%)]" />
-          <div className="relative grid grid-cols-1 gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+          <div className="relative grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
             <div>
               <div className="flex flex-wrap gap-2">
                 <Badge className="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-700">
@@ -157,20 +219,20 @@ export default function HomeStoryLayer({
                   Descobrir → Analisar → Tramitar
                 </Badge>
               </div>
-              <h1 className="mt-5 text-5xl font-semibold tracking-tight text-slate-950 md:text-7xl">
+              <h1 className="mt-4 text-5xl font-semibold tracking-tight text-slate-950 md:text-6xl">
                 Tramita
               </h1>
-              <p className="mt-4 max-w-3xl text-xl leading-relaxed text-slate-700 md:text-2xl">
+              <p className="mt-3 max-w-3xl text-xl leading-relaxed text-slate-700 md:text-2xl">
                 Infraestrutura de inteligência e transação imobiliária para o
                 Brasil.
               </p>
-              <p className="mt-5 max-w-4xl text-base leading-relaxed text-slate-600 md:text-lg">
+              <p className="mt-4 max-w-4xl text-base leading-relaxed text-slate-600 md:text-lg">
                 Tramita ajuda investidores e profissionais do mercado
                 imobiliário a ir da descoberta de oportunidades à análise do
                 imóvel e à execução da transação com dados claros, riscos
                 explícitos, evidências documentadas e próximos passos definidos.
               </p>
-              <div className="mt-6 rounded-[26px] border border-slate-200 bg-white/86 p-4 shadow-sm">
+              <div className="mt-5 rounded-[26px] border border-slate-200 bg-white/86 p-4 shadow-sm">
                 <div className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-400">
                   Tese do produto
                 </div>
@@ -178,7 +240,7 @@ export default function HomeStoryLayer({
                   Encontrar o ativo. Entender o risco. Controlar a transação.
                 </div>
               </div>
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                 <Button
                   className="h-12 rounded-2xl bg-slate-950 px-5 text-white hover:bg-slate-900"
                   onClick={onOpenPilot}
@@ -193,6 +255,14 @@ export default function HomeStoryLayer({
                 >
                   <FileText className="mr-2 h-4 w-4" />
                   Ver memorando
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-12 rounded-2xl border-slate-200 bg-white px-5"
+                  onClick={onViewPricing}
+                >
+                  <Coins className="mr-2 h-4 w-4" />
+                  Ver modelo comercial
                 </Button>
               </div>
             </div>
@@ -246,6 +316,44 @@ export default function HomeStoryLayer({
         </ShellCard>
 
         <ShellCard className="p-6 md:p-7">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+            <SectionTitle
+              eyebrow="Fundação"
+              title="Camada de dados do imóvel"
+              description="O Tramita foi desenhado para receber dados de cartórios, prefeituras, corretores, proprietários, incorporadores, jurídico, bancos, uploads manuais e futuras APIs. Cada informação mantém origem, status, confiança e pendências de validação."
+            />
+
+            <div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {dataSourceCards.map((item) => (
+                  <div
+                    key={item.source}
+                    className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4"
+                  >
+                    <div className="text-sm font-semibold text-slate-950">
+                      {item.source}
+                    </div>
+                    <div className="mt-2 inline-flex rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600">
+                      {item.status}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="font-semibold text-slate-950">
+                  Verificado, estimado, pendente ou divergente
+                </div>
+                <div className="mt-2 text-sm leading-relaxed text-slate-600">
+                  O sistema não trata ausência de dado como problema. Ele
+                  transforma o desconhecido em pendência explícita e
+                  monetizável.
+                </div>
+              </div>
+            </div>
+          </div>
+        </ShellCard>
+
+        <ShellCard className="p-6 md:p-7">
           <SectionTitle
             eyebrow="Plataforma"
             title="Uma plataforma, três capacidades conectadas"
@@ -276,9 +384,13 @@ export default function HomeStoryLayer({
                   <div className="mt-4 text-sm leading-relaxed text-slate-500">
                     {pillar.text}
                   </div>
-                  <div className="mt-5 inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-medium text-slate-700">
+                  <button
+                    className="mt-5 inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-medium text-slate-700 transition hover:bg-white hover:text-slate-950"
+                    onClick={getPillarAction(pillar.title)}
+                    type="button"
+                  >
                     {pillar.cta}
-                  </div>
+                  </button>
                 </div>
               );
             })}

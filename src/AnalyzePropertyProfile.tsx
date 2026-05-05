@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -15,17 +15,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import DossierFulfillmentPanel from "./components/DossierFulfillmentPanel";
+import DossierRequestModal from "./components/DossierRequestModal";
+import { tramitaMockData } from "./data/tramitaMockData";
+import type { AnalysisSummary, Property } from "./types/tramita";
 
-const facts = [
-  ["Área", "1.240 m²"],
-  ["Frente", "28 m"],
-  ["Tipo", "Terreno urbano"],
-  ["Uso atual", "Residencial baixo"],
-  ["Zona", "A confirmar"],
-  ["IPTU", "Pendente"],
-  ["Matrícula", "Não anexada"],
-  ["Liquidez", "Média-alta"],
-];
+const defaultSelectedProperty = tramitaMockData.selectedProperty;
+const defaultAnalysisSummary = tramitaMockData.analysisSummary;
+const dossierFulfillmentItems = tramitaMockData.dossierFulfillmentItems;
 
 const riskSignals = [
   { label: "Matrícula", status: "Pendente", tone: "amber", text: "Anexar matrícula atualizada para validar titularidade e ônus." },
@@ -39,6 +36,31 @@ const comparables = [
   { name: "Terreno B", distance: "800 m", area: "1.500 m²", price: "R$ 2.420/m²", score: "Média" },
   { name: "Terreno C", distance: "1,1 km", area: "1.100 m²", price: "R$ 2.790/m²", score: "Alta" },
 ];
+
+function getSourceTone(source: (typeof tramitaMockData.propertySources)[number]) {
+  if (source.statusLabel === "Recebido" || source.statusLabel === "Em revisão") {
+    return "green" as const;
+  }
+
+  if (source.statusLabel === "A validar") {
+    return "blue" as const;
+  }
+
+  if (source.sourceType === "banco") {
+    return "slate" as const;
+  }
+
+  return "amber" as const;
+}
+
+const dataSources = tramitaMockData.propertySources.map((source) => ({
+  source: source.source,
+  status: source.statusLabel,
+  confidence: source.confidence,
+  provided: source.provided,
+  nextValidation: source.nextValidation,
+  tone: getSourceTone(source),
+}));
 
 function ShellCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -82,12 +104,35 @@ function ScoreRow({ label, value, progress }: { label: string; value: string; pr
 }
 
 type AnalyzePropertyProfileProps = {
+  analysisSummary?: AnalysisSummary;
+  dossierRequested?: boolean;
+  onRequestDossier?: (propertyId: string) => void;
   onStartDueDiligence?: () => void;
+  selectedProperty?: Property;
 };
 
 export default function TramitaAnalyzePropertyProfile({
+  analysisSummary = defaultAnalysisSummary,
+  dossierRequested = false,
+  onRequestDossier,
   onStartDueDiligence,
+  selectedProperty = defaultSelectedProperty,
 }: AnalyzePropertyProfileProps) {
+  const [dossierModalOpen, setDossierModalOpen] = useState(false);
+  const [dossierNotice, setDossierNotice] = useState<string | null>(null);
+  const facts = selectedProperty.facts.map(
+    ({ label, value }) => [label, value] as const,
+  );
+  const showDossierRequested = dossierRequested || Boolean(dossierNotice);
+
+  function confirmDossierRequest() {
+    setDossierModalOpen(false);
+    onRequestDossier?.(selectedProperty.id);
+    setDossierNotice(
+      "Solicitação criada. O dossiê aparece como solicitado neste protótipo.",
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.07),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-4 md:px-8 md:py-6">
       <div className="mx-auto max-w-[1480px] space-y-6">
@@ -100,17 +145,17 @@ export default function TramitaAnalyzePropertyProfile({
                 <ToneBadge tone="green">Confiança média-alta</ToneBadge>
                 <ToneBadge tone="amber">Potencial de incorporação</ToneBadge>
               </div>
-              <h1 className="mt-5 text-4xl font-semibold tracking-tight text-slate-950 md:text-6xl">Terreno em Meireles</h1>
+              <h1 className="mt-5 text-4xl font-semibold tracking-tight text-slate-950 md:text-6xl">{selectedProperty.title}</h1>
               <p className="mt-4 max-w-3xl text-base leading-relaxed text-slate-600 md:text-lg">
-                1.240 m² · Zona urbana consolidada · Próximo à Av. Santos Dumont · Fortaleza, CE
+                {selectedProperty.areaLabel} · Zona urbana consolidada · Próximo à Av. Santos Dumont · {selectedProperty.city}, {selectedProperty.state}
               </p>
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {[
-                ["Valor estimado", "R$ 2,8M–3,4M"],
-                ["Centro da faixa", "R$ 3,1M"],
-                ["Confiança", "74%"],
+                ["Valor estimado", analysisSummary.estimatedValueRange],
+                ["Centro da faixa", analysisSummary.valueCenter],
+                ["Confiança", analysisSummary.confidenceLabel],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-3xl border border-slate-200 bg-white/80 p-4 shadow-sm">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{label}</div>
@@ -196,6 +241,65 @@ export default function TramitaAnalyzePropertyProfile({
                 ))}
               </div>
             </ShellCard>
+
+            <ShellCard className="p-6">
+              <SectionTitle
+                eyebrow="Proveniência"
+                title="Fontes e confiabilidade dos dados"
+                description="Cada dado usado na análise mantém origem, status e confiança. Informação desconhecida não é tratada como problema; ela vira pendência explícita."
+              />
+              <div className="mt-4 flex flex-wrap gap-2">
+                {["Verificado", "Estimado", "Pendente", "Divergente"].map(
+                  (item) => (
+                    <span
+                      key={item}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600"
+                    >
+                      {item}
+                    </span>
+                  ),
+                )}
+              </div>
+              <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {dataSources.map((source) => (
+                  <div
+                    key={source.source}
+                    className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="font-semibold text-slate-950">
+                        {source.source}
+                      </div>
+                      <ToneBadge tone={source.tone}>{source.status}</ToneBadge>
+                    </div>
+                    <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Confiança: {source.confidence}
+                    </div>
+                    <div className="mt-1 text-sm leading-relaxed text-slate-600">
+                      Dados fornecidos: {source.provided}
+                    </div>
+                    <div className="mt-2 text-sm leading-relaxed text-slate-500">
+                      Próxima validação: {source.nextValidation}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {showDossierRequested ? (
+                <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-relaxed text-emerald-800">
+                  {dossierNotice ??
+                    "Dossiê solicitado para este ativo. O pipeline abaixo mostra a simulação de coleta e validação."}
+                </div>
+              ) : null}
+              <Button
+                variant="outline"
+                className="mt-5 h-11 rounded-2xl border-slate-200 bg-white px-5"
+                onClick={() => setDossierModalOpen(true)}
+              >
+                Solicitar dossiê
+              </Button>
+            </ShellCard>
+
+            <DossierFulfillmentPanel items={dossierFulfillmentItems} compact />
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <ShellCard className="p-6">
@@ -287,9 +391,21 @@ export default function TramitaAnalyzePropertyProfile({
               </div>
               <p className="mt-3 text-sm leading-relaxed text-slate-500">Boa combinação de valor, localização e potencial. Validação documental ainda é necessária.</p>
               <div className="mt-6 space-y-5">
-                <ScoreRow label="Valor" value="74/100" progress={74} />
-                <ScoreRow label="Potencial" value="82/100" progress={82} />
-                <ScoreRow label="Confiança" value="68%" progress={68} />
+                <ScoreRow
+                  label="Valor"
+                  value={`${analysisSummary.valueScore}/100`}
+                  progress={analysisSummary.valueScore}
+                />
+                <ScoreRow
+                  label="Potencial"
+                  value={`${analysisSummary.potentialScore}/100`}
+                  progress={analysisSummary.potentialScore}
+                />
+                <ScoreRow
+                  label="Confiança"
+                  value={`${analysisSummary.confidenceScore}%`}
+                  progress={analysisSummary.confidenceScore}
+                />
               </div>
               <div className="mt-6 grid grid-cols-2 gap-3">
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
@@ -379,6 +495,12 @@ export default function TramitaAnalyzePropertyProfile({
           </aside>
         </div>
       </div>
+      <DossierRequestModal
+        open={dossierModalOpen}
+        onClose={() => setDossierModalOpen(false)}
+        onConfirm={confirmDossierRequest}
+        propertyName={`${tramitaMockData.dossierRequestPackage.propertyName} · ${tramitaMockData.dossierRequestPackage.propertyLocation}`}
+      />
     </div>
   );
 }

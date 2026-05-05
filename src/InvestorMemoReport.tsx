@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   ArrowRight,
   Building2,
@@ -14,24 +14,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { tramitaMockData } from "./data/tramitaMockData";
+import type { Property, ReportMemo } from "./types/tramita";
 
-const summaryMetrics = [
-  ["Encaixe da oportunidade", "86/100"],
-  ["Valor estimado", "R$ 2,8M–3,4M"],
-  ["Potencial urbanístico", "Alto / sujeito à confirmação"],
-  ["Prontidão da transação", "68%"],
-  ["Nível de risco", "Médio"],
-];
+const defaultReportMemo = tramitaMockData.reportMemo;
+const defaultSelectedProperty = tramitaMockData.selectedProperty;
 
-const sourcingReasons = [
-  "Forte encaixe de localização",
-  "Tamanho do lote compatível com a tese",
-  "Potencial urbanístico parece atrativo",
-  "Sinal de liquidez favorável",
-  "Requer validação documental",
-];
-
-const propertyFacts = [
+const defaultPropertyFacts = [
   ["Área", "1.240 m²"],
   ["Frente", "28 m"],
   ["Uso atual", "Residencial baixo"],
@@ -57,21 +46,31 @@ const risks = [
   ["Financiamento/documentação", "Documento do comprador pendente", "red"],
 ] as const;
 
-const readiness = [
-  ["Documentos", "82%", 82],
-  ["Jurídico", "88%", 88],
-  ["Financeiro", "51%", 51],
-  ["Prontidão para fechamento", "68%", 68],
-] as const;
+const dossierStatusLabels = {
+  requested: "Solicitado",
+  collecting: "Em coleta",
+  validating: "Em validação",
+  delivered: "Entregue",
+  blocked: "Bloqueado",
+} as const;
 
-const nextSteps = [
-  "Obter matrícula atualizada",
-  "Verificar IPTU/cadastro municipal",
-  "Confirmar parâmetros urbanísticos oficiais",
-  "Solicitar documento financeiro do comprador",
-  "Recalcular confiança após dados oficiais",
-  "Decidir se avança para oferta vinculante",
-];
+const dossierStatusTones = {
+  requested: "blue",
+  collecting: "amber",
+  validating: "slate",
+  delivered: "green",
+  blocked: "red",
+} as const;
+
+const dossierReportStates = [
+  "fulfillment-comparaveis",
+  "fulfillment-urbanistico",
+  "fulfillment-matricula",
+]
+  .map((id) =>
+    tramitaMockData.dossierFulfillmentItems.find((item) => item.id === id),
+  )
+  .filter((item): item is NonNullable<typeof item> => Boolean(item));
 
 function ShellCard({
   children,
@@ -133,7 +132,9 @@ function ToneBadge({
   };
 
   return (
-    <Badge className={`rounded-full border px-3 py-1 ${map[tone]}`}>
+    <Badge
+      className={`h-auto min-h-5 max-w-full whitespace-normal break-words rounded-full border px-3 py-1 text-center leading-tight ${map[tone]}`}
+    >
       {children}
     </Badge>
   );
@@ -159,7 +160,60 @@ function ReadinessRow({
   );
 }
 
-export default function InvestorMemoReport() {
+type InvestorMemoReportProps = {
+  onOpenTransaction?: () => void;
+  reportMemo?: ReportMemo;
+  selectedProperty?: Property;
+};
+
+export default function InvestorMemoReport({
+  onOpenTransaction,
+  reportMemo = defaultReportMemo,
+  selectedProperty = defaultSelectedProperty,
+}: InvestorMemoReportProps) {
+  const [notice, setNotice] = useState<string | null>(null);
+  const propertyFacts = selectedProperty
+    ? [
+        ["Área", selectedProperty.areaLabel],
+        ["Frente", selectedProperty.frontageLabel],
+        ["Uso atual", selectedProperty.currentUse],
+        ["Zona", selectedProperty.zone],
+        ["Matrícula", selectedProperty.matriculaStatus],
+        ["IPTU", selectedProperty.iptuStatus],
+      ]
+    : defaultPropertyFacts;
+  const summaryMetrics = reportMemo.summaryMetrics.map(
+    ({ label, value }) => [label, value] as const,
+  );
+  const sourcingReasons = reportMemo.sourcingReasons;
+  const readiness = reportMemo.transactionReadiness.map(
+    ({ label, value, progress }) => [label, value, progress] as const,
+  );
+  const nextSteps = reportMemo.nextSteps;
+  const dataReliability = reportMemo.dataReliability.map(
+    ({ label, value }) => [label, value] as const,
+  );
+  const pendingSources = reportMemo.pendingSources;
+
+  async function handleShareMemo() {
+    const fallbackMessage =
+      "Copie o link da página para compartilhar o memorando.";
+
+    if (typeof window === "undefined" || !navigator.clipboard) {
+      setNotice(fallbackMessage);
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(
+        `${window.location.origin}${window.location.pathname}#reports`,
+      );
+      setNotice("Link do memorando copiado.");
+    } catch {
+      setNotice(fallbackMessage);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.07),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-4 md:px-8 md:py-6">
       <div className="mx-auto max-w-[1480px] space-y-6">
@@ -173,10 +227,10 @@ export default function InvestorMemoReport() {
                 <ToneBadge tone="amber">Risco médio</ToneBadge>
               </div>
               <h1 className="mt-5 text-4xl font-semibold tracking-tight text-slate-950 md:text-6xl">
-                Memorando Tramita
+                {reportMemo.title}
               </h1>
               <p className="mt-4 text-lg leading-relaxed text-slate-600 md:text-xl">
-                Terreno em Meireles · Fortaleza, CE
+                {reportMemo.subtitle}
               </p>
             </div>
 
@@ -185,12 +239,10 @@ export default function InvestorMemoReport() {
                 Recomendação principal
               </div>
               <div className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-                Vale aprofundar diligência
+                {reportMemo.recommendation}
               </div>
               <p className="mt-3 text-sm leading-relaxed text-slate-500">
-                A oportunidade de terreno no Meireles mostra forte encaixe com
-                a tese-alvo com base em localização, tamanho do lote, valor
-                estimado de mercado e potencial urbanístico preliminar.
+                {reportMemo.summaryText}
               </p>
             </div>
           </div>
@@ -215,6 +267,70 @@ export default function InvestorMemoReport() {
                     </div>
                     <div className="mt-2 text-sm font-semibold leading-snug text-slate-950">
                       {value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ShellCard>
+
+            <ShellCard className="p-6">
+              <SectionTitle
+                eyebrow="Confiabilidade"
+                title="Origem e confiabilidade dos dados"
+                description="Este memorando separa dados verificados, estimativas, premissas e pendências para evitar falsa certeza."
+              />
+              <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+                {dataReliability.map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4"
+                  >
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      {label}
+                    </div>
+                    <div className="mt-2 text-xl font-semibold text-slate-950">
+                      {value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 rounded-[24px] border border-slate-200 bg-white p-5">
+                <div className="font-semibold text-slate-950">
+                  Fontes pendentes principais
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+                  {pendingSources.map((source) => (
+                    <div
+                      key={source}
+                      className="rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-sm text-slate-700"
+                    >
+                      {source}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </ShellCard>
+
+            <ShellCard className="p-6">
+              <SectionTitle
+                eyebrow="Dossiê"
+                title="Status dos dados do dossiê"
+                description="Leitura resumida das fontes que alimentam o memorando."
+              />
+              <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+                {dossierReportStates.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-2xl border border-slate-200 bg-white p-4"
+                  >
+                    <ToneBadge tone={dossierStatusTones[item.status]}>
+                      {dossierStatusLabels[item.status]}
+                    </ToneBadge>
+                    <div className="mt-3 text-sm font-semibold leading-snug text-slate-950">
+                      {item.label}
+                    </div>
+                    <div className="mt-1 text-sm leading-relaxed text-slate-500">
+                      {item.providerLabel}
                     </div>
                   </div>
                 ))}
@@ -342,8 +458,8 @@ export default function InvestorMemoReport() {
                     key={label}
                     className="rounded-2xl border border-slate-200 bg-white p-4"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="font-semibold text-slate-950">
+                    <div className="flex min-w-0 flex-col gap-3">
+                      <div className="min-w-0 break-words font-semibold text-slate-950">
                         {label}
                       </div>
                       <ToneBadge tone={tone}>{status}</ToneBadge>
@@ -482,14 +598,27 @@ export default function InvestorMemoReport() {
                 title="Ações de exportação"
                 description="Ações estáticas do protótipo para um futuro fluxo de relatórios."
               />
+              {notice ? (
+                <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
+                  {notice}
+                </div>
+              ) : null}
               <div className="mt-5 space-y-3">
-                <Button className="h-12 w-full rounded-2xl bg-slate-950 text-white hover:bg-slate-900">
+                <Button
+                  className="h-12 w-full rounded-2xl bg-slate-950 text-white hover:bg-slate-900"
+                  onClick={() =>
+                    setNotice(
+                      "Exportação em PDF será habilitada na próxima versão.",
+                    )
+                  }
+                >
                   <Download className="mr-2 h-4 w-4" />
                   Exportar PDF
                 </Button>
                 <Button
                   variant="outline"
                   className="h-12 w-full rounded-2xl border-slate-200 bg-white"
+                  onClick={handleShareMemo}
                 >
                   <Share2 className="mr-2 h-4 w-4" />
                   Compartilhar memorando
@@ -497,6 +626,7 @@ export default function InvestorMemoReport() {
                 <Button
                   variant="outline"
                   className="h-12 w-full rounded-2xl border-slate-200 bg-white"
+                  onClick={onOpenTransaction}
                 >
                   Abrir transação
                   <ArrowRight className="ml-2 h-4 w-4" />

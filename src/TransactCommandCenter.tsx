@@ -18,6 +18,15 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { tramitaMockData } from "./data/tramitaMockData";
+
+const transaction = tramitaMockData.transaction;
+const transactionMainBlocker =
+  transaction.tasks.find((task) => task.id === transaction.mainBlockerId) ??
+  transaction.tasks[0];
+const bankApprovalTask =
+  transaction.tasks.find((task) => task.id === "task-bank-approval") ??
+  transactionMainBlocker;
 
 const stages = [
   {
@@ -72,22 +81,25 @@ const stages = [
 
 const blockers = [
   {
-    title: "Comprovante de renda complementar",
-    text: "Sem esse envio, o banco não conclui a aprovação final do financiamento.",
-    owner: "Comprador",
-    state: "Pendente hoje",
-    urgency: "Alta",
+    title: transactionMainBlocker.title,
+    text:
+      "Sem esse envio, o banco não conclui a aprovação final do financiamento.",
+    owner: transactionMainBlocker.owner,
+    state: transactionMainBlocker.statusLabel,
+    urgency: transactionMainBlocker.urgencyLabel ?? "Alta",
     tone: "red" as const,
-    action: "Resolver agora",
+    action: transactionMainBlocker.actionLabel ?? "Resolver agora",
   },
   {
-    title: "Aprovação final do banco",
-    text: "Permanece em análise até o comprador anexar o comprovante complementar.",
-    owner: "Banco",
-    state: "Em análise",
-    urgency: "Média",
+    title: bankApprovalTask.title,
+    text:
+      bankApprovalTask.impact ??
+      "Permanece em análise até o comprador anexar o comprovante complementar.",
+    owner: bankApprovalTask.owner,
+    state: bankApprovalTask.statusLabel,
+    urgency: bankApprovalTask.urgencyLabel ?? "Média",
     tone: "amber" as const,
-    action: "Acompanhar banco",
+    action: bankApprovalTask.actionLabel ?? "Acompanhar banco",
   },
 ];
 
@@ -204,6 +216,10 @@ const activity = [
   },
 ];
 
+type TransactCommandCenterProps = {
+  transactionData?: typeof transaction;
+};
+
 function ShellCard({
   children,
   className = "",
@@ -290,7 +306,11 @@ function ScoreRow({
   );
 }
 
-export default function TransactCommandCenter() {
+export default function TransactCommandCenter({
+  transactionData,
+}: TransactCommandCenterProps) {
+  const activeTransaction = transactionData ?? transaction;
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.07),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-4 md:px-8 md:py-6">
       <div className="mx-auto max-w-[1480px] space-y-6">
@@ -311,8 +331,8 @@ export default function TransactCommandCenter() {
             </h1>
 
             <p className="mt-4 max-w-3xl text-base leading-relaxed text-slate-600 md:text-lg">
-              TR-2041 · Fortaleza, CE · Comprador: Alpha Invest · Vendedor:
-              Carlos Almeida
+              {activeTransaction.id} · {activeTransaction.location} · Comprador:{" "}
+              {activeTransaction.buyer} · Vendedor: {activeTransaction.seller}
             </p>
 
             <div className="mt-6 rounded-[26px] border border-amber-200/70 bg-white/88 p-4 shadow-sm backdrop-blur md:p-5">
@@ -334,10 +354,10 @@ export default function TransactCommandCenter() {
 
             <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
               {[
-                ["Etapa", "Financiamento"],
+                ["Etapa", transaction.stageLabel],
                 ["Ação", "Comprovante de renda"],
-                ["Dono", "Comprador"],
-                ["Prontidão", "68%"],
+                ["Dono", transactionMainBlocker.owner],
+                ["Prontidão", `${transaction.readiness}%`],
               ].map(([label, value]) => (
                 <div
                   key={label}
@@ -639,12 +659,24 @@ export default function TransactCommandCenter() {
               <div className="mt-6 space-y-5">
                 <ScoreRow
                   label="Prontidão para fechamento"
-                  value="68%"
-                  progress={68}
+                  value={`${transaction.readiness}%`}
+                  progress={transaction.readiness}
                 />
-                <ScoreRow label="Documentos" value="82%" progress={82} />
-                <ScoreRow label="Jurídico" value="88%" progress={88} />
-                <ScoreRow label="Financeiro" value="51%" progress={51} />
+                <ScoreRow
+                  label="Documentos"
+                  value={`${transaction.documentsReadiness}%`}
+                  progress={transaction.documentsReadiness}
+                />
+                <ScoreRow
+                  label="Jurídico"
+                  value={`${transaction.legalReadiness}%`}
+                  progress={transaction.legalReadiness}
+                />
+                <ScoreRow
+                  label="Financeiro"
+                  value={`${transaction.financialReadiness}%`}
+                  progress={transaction.financialReadiness}
+                />
               </div>
 
               <div className="mt-6 grid grid-cols-2 gap-3">
@@ -660,7 +692,9 @@ export default function TransactCommandCenter() {
                   <div className="text-xs uppercase tracking-[0.14em] text-red-600">
                     Bloqueios críticos
                   </div>
-                  <div className="mt-1 font-semibold text-red-950">1</div>
+                  <div className="mt-1 font-semibold text-red-950">
+                    {transaction.criticalBlockers}
+                  </div>
                 </div>
               </div>
             </ShellCard>
@@ -683,6 +717,41 @@ export default function TransactCommandCenter() {
                     <div className="mt-1 text-sm leading-relaxed text-slate-500">
                       Sem esse envio, o banco não conclui a aprovação final.
                     </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-3.5">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Quem deve fornecer o próximo dado
+                  </div>
+                  <div className="mt-3 grid grid-cols-1 gap-2">
+                    {[
+                      ["Dado", transactionMainBlocker.title],
+                      ["Responsável", transactionMainBlocker.owner],
+                      ["Usado por", transactionMainBlocker.usedBy ?? "Banco"],
+                      ["Status", transactionMainBlocker.statusLabel],
+                      [
+                        "Impacto",
+                        transactionMainBlocker.impact ??
+                          "Financiamento não avança sem este documento",
+                      ],
+                    ].map(([label, value]) => (
+                      <div
+                        key={label}
+                        className="grid grid-cols-[92px_minmax(0,1fr)] gap-3 text-sm"
+                      >
+                        <div className="font-medium text-slate-500">
+                          {label}
+                        </div>
+                        <div className="font-medium leading-relaxed text-slate-900">
+                          {value}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs leading-relaxed text-slate-500">
+                    Cada pendência tem dono, finalidade e impacto no
+                    fechamento.
                   </div>
                 </div>
 

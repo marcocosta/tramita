@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   LandPlot,
   Layers3,
-  MapPin,
   Radar,
   Search,
   ShieldCheck,
@@ -16,54 +15,39 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import DossierFulfillmentPanel from "./components/DossierFulfillmentPanel";
+import DossierRequestModal from "./components/DossierRequestModal";
+import OpportunityMap from "./components/OpportunityMap";
+import { tramitaMockData } from "./data/tramitaMockData";
+import type { DossierRequestStatusByPropertyId } from "./state/tramitaAppState";
+import type { Opportunity } from "./types/tramita";
 
-const candidates = [
-  {
-    id: "OP-1187",
-    title: "Terreno · Meireles",
-    location: "Fortaleza, CE",
-    area: "1.240 m²",
-    fit: 86,
-    value: "R$ 2,8M–3,4M",
-    thesis: "Residencial vertical / uso misto",
-    risk: "Médio",
-    status: "Promissor",
-    selected: true,
-  },
-  {
-    id: "OP-1179",
-    title: "Lote · Aldeota",
-    location: "Fortaleza, CE",
-    area: "940 m²",
-    fit: 78,
-    value: "R$ 2,1M–2,6M",
-    thesis: "Serviços / clínica",
-    risk: "Médio",
-    status: "Analisar",
-    selected: false,
-  },
-  {
-    id: "OP-1168",
-    title: "Terreno · Cocó",
-    location: "Fortaleza, CE",
-    area: "1.760 m²",
-    fit: 74,
-    value: "R$ 3,6M–4,2M",
-    thesis: "Incorporação residencial",
-    risk: "Alto",
-    status: "Atenção",
-    selected: false,
-  },
-];
+const defaultCandidateOptions = tramitaMockData.discover.candidates;
 
-const filters = [
-  ["Cidade", "Fortaleza"],
-  ["Área", "800–2.000 m²"],
-  ["Uso alvo", "Residencial / misto"],
-  ["Liquidez", "Média-alta"],
-  ["Risco", "Sem bloqueio crítico"],
-];
+const searchCommand = tramitaMockData.discover.searchThesis.command;
+const dossierFulfillmentItems = tramitaMockData.dossierFulfillmentItems;
+
+const dataAvailabilityLabels: Record<Opportunity["dataAvailability"], string> =
+  {
+    low: "Baixa",
+    medium: "Média",
+    high: "Alta",
+  };
+
+const defaultFilters = {
+  state: "Ceará",
+  city: "Fortaleza",
+  region: "Todas",
+  assetType: "Terreno urbano",
+  areaMin: "800",
+  areaMax: "2000",
+  targetUse: "Todos",
+  dataAvailability: "Todas",
+};
+
+type DiscoverFilters = typeof defaultFilters;
 
 const signals = [
   { label: "Localização", value: "88/100", progress: 88 },
@@ -105,6 +89,31 @@ const thesisChecks = [
   "Localização em zona urbana consolidada com serviços e circulação próximos.",
   "Potencial depende de confirmação de parâmetros urbanísticos oficiais.",
 ];
+
+function getUniqueOptions(values: string[]) {
+  return Array.from(new Set(values)).sort((a, b) =>
+    a.localeCompare(b, "pt-BR"),
+  );
+}
+
+function matchesFilters(opportunity: Opportunity, filters: DiscoverFilters) {
+  const areaMin = Number(filters.areaMin) || 0;
+  const areaMax = Number(filters.areaMax) || Number.POSITIVE_INFINITY;
+
+  return (
+    (filters.state === "Todos" || opportunity.state === filters.state) &&
+    (filters.city === "Todas" || opportunity.city === filters.city) &&
+    (filters.region === "Todas" || opportunity.region === filters.region) &&
+    (filters.assetType === "Todos" ||
+      opportunity.assetType === filters.assetType) &&
+    opportunity.areaM2 >= areaMin &&
+    opportunity.areaM2 <= areaMax &&
+    (filters.targetUse === "Todos" ||
+      opportunity.targetUse.includes(filters.targetUse)) &&
+    (filters.dataAvailability === "Todas" ||
+      opportunity.dataAvailability === filters.dataAvailability)
+  );
+}
 
 function ShellCard({
   children,
@@ -193,12 +202,191 @@ function ScoreRow({
 }
 
 type DiscoverOpportunityDetailProps = {
-  onAnalyze?: () => void;
+  dossierRequestStatusByPropertyId?: DossierRequestStatusByPropertyId;
+  onAnalyze?: (opportunityId?: string) => void;
+  onRequestDossier?: (propertyId: string, opportunityId?: string) => void;
+  onSearchThesisChange?: (value: string) => void;
+  onSelectOpportunity?: (opportunityId: string) => void;
+  opportunities?: Opportunity[];
+  searchThesisText?: string;
+  selectedOpportunityId?: string;
 };
 
 export default function DiscoverOpportunityDetail({
+  dossierRequestStatusByPropertyId = {},
   onAnalyze,
+  onRequestDossier,
+  onSearchThesisChange,
+  onSelectOpportunity,
+  opportunities = defaultCandidateOptions,
+  searchThesisText = searchCommand,
+  selectedOpportunityId,
 }: DiscoverOpportunityDetailProps) {
+  const [dossierModalOpen, setDossierModalOpen] = useState(false);
+  const [dossierNotice, setDossierNotice] = useState<string | null>(null);
+  const [dossierTargetOpportunityId, setDossierTargetOpportunityId] = useState<
+    string | null
+  >(null);
+  const [searchNotice, setSearchNotice] = useState<string | null>(null);
+  const [draftFilters, setDraftFilters] =
+    useState<DiscoverFilters>(defaultFilters);
+  const [appliedFilters, setAppliedFilters] =
+    useState<DiscoverFilters>(defaultFilters);
+
+  const candidateOptions = opportunities;
+  const filteredCandidateOptions = candidateOptions.filter((candidate) =>
+    matchesFilters(candidate, appliedFilters),
+  );
+  const selectedCandidateOutsideFilter = selectedOpportunityId
+    ? candidateOptions.find(
+        (candidate) =>
+          candidate.id === selectedOpportunityId &&
+          !filteredCandidateOptions.some((item) => item.id === selectedOpportunityId),
+      )
+    : undefined;
+  const visibleCandidateOptions =
+    filteredCandidateOptions.length > 0
+      ? [
+          ...(selectedCandidateOutsideFilter
+            ? [selectedCandidateOutsideFilter]
+            : []),
+          ...filteredCandidateOptions,
+        ]
+      : selectedCandidateOutsideFilter
+        ? [selectedCandidateOutsideFilter]
+        : [];
+  const effectiveSelectedOpportunityId =
+    visibleCandidateOptions.some(
+      (candidate) => candidate.id === selectedOpportunityId,
+    )
+      ? selectedOpportunityId
+      : visibleCandidateOptions[0]?.id ?? selectedOpportunityId;
+  const candidates = visibleCandidateOptions.map((candidate) => ({
+    ...candidate,
+    selected: candidate.id === effectiveSelectedOpportunityId,
+  }));
+  const selectedCandidate =
+    candidates.find((candidate) => candidate.selected) ??
+    candidateOptions.find((candidate) => candidate.id === selectedOpportunityId) ??
+    candidateOptions[0];
+  const filters = [
+    { label: "País", value: "Brasil" },
+    { label: "Estado", value: appliedFilters.state },
+    { label: "Cidade", value: appliedFilters.city },
+    { label: "Região", value: appliedFilters.region },
+    { label: "Tipo", value: appliedFilters.assetType },
+    {
+      label: "Área",
+      value: `${appliedFilters.areaMin || "0"}–${appliedFilters.areaMax || "∞"} m²`,
+    },
+    { label: "Uso alvo", value: appliedFilters.targetUse },
+    {
+      label: "Dados",
+      value:
+        appliedFilters.dataAvailability === "Todas"
+          ? "Todas"
+          : dataAvailabilityLabels[
+              appliedFilters.dataAvailability as Opportunity["dataAvailability"]
+            ],
+    },
+  ].map(({ label, value }) => [label, value] as const);
+  const stateOptions = getUniqueOptions(candidateOptions.map((item) => item.state));
+  const cityOptions = getUniqueOptions(
+    candidateOptions
+      .filter(
+        (item) => draftFilters.state === "Todos" || item.state === draftFilters.state,
+      )
+      .map((item) => item.city),
+  );
+  const regionOptions = getUniqueOptions(
+    candidateOptions
+      .filter(
+        (item) =>
+          (draftFilters.state === "Todos" || item.state === draftFilters.state) &&
+          (draftFilters.city === "Todas" || item.city === draftFilters.city),
+      )
+      .map((item) => item.region),
+  );
+  const assetTypeOptions = getUniqueOptions(
+    candidateOptions.map((item) => item.assetType),
+  );
+  const targetUseOptions = getUniqueOptions(
+    candidateOptions.flatMap((item) => item.targetUse),
+  );
+  const resultCount = candidates.length;
+  const bestFit = candidates.reduce(
+    (max, candidate) => Math.max(max, candidate.fitScore),
+    0,
+  );
+  const dynamicThesisMetrics = [
+    ["Candidatos", String(resultCount)],
+    ["Shortlist", String(Math.min(resultCount, 3))],
+    ["Melhor fit", bestFit ? String(bestFit) : "—"],
+  ] as const;
+  const importedCount = candidateOptions.filter((candidate) => candidate.imported)
+    .length;
+  const selectedDossierRequested = Boolean(
+    selectedCandidate &&
+      dossierRequestStatusByPropertyId[selectedCandidate.propertyId] ===
+        "requested",
+  );
+  const showDossierPipeline =
+    selectedDossierRequested || Boolean(dossierNotice);
+  const selectedOpportunityName =
+    selectedCandidate?.title.split("·").pop()?.trim() ??
+    selectedCandidate?.title ??
+    "ativo selecionado";
+
+  function applySearchThesis() {
+    const nextCandidates = candidateOptions.filter((candidate) =>
+      matchesFilters(candidate, draftFilters),
+    );
+
+    setAppliedFilters(draftFilters);
+    if (
+      nextCandidates.length > 0 &&
+      !nextCandidates.some((candidate) => candidate.id === selectedOpportunityId)
+    ) {
+      onSelectOpportunity?.(nextCandidates[0].id);
+    }
+    setSearchNotice(
+      "Tese aplicada ao conjunto de dados disponível neste protótipo.",
+    );
+  }
+
+  function selectCandidate(opportunityId: string) {
+    onSelectOpportunity?.(opportunityId);
+  }
+
+  function updateDraftFilter(key: keyof DiscoverFilters, value: string) {
+    setDraftFilters((current) => ({
+      ...current,
+      [key]: value,
+      ...(key === "state" ? { city: "Todas", region: "Todas" } : {}),
+      ...(key === "city" ? { region: "Todas" } : {}),
+    }));
+  }
+
+  function openDossierModal(opportunityId = selectedCandidate?.id) {
+    setDossierTargetOpportunityId(opportunityId ?? null);
+    setDossierModalOpen(true);
+  }
+
+  function confirmDossierRequest() {
+    const targetCandidate =
+      candidates.find(
+        (candidate) => candidate.id === dossierTargetOpportunityId,
+      ) ?? selectedCandidate;
+
+    setDossierModalOpen(false);
+    if (targetCandidate) {
+      onRequestDossier?.(targetCandidate.propertyId, targetCandidate.id);
+    }
+    setDossierNotice(
+      "Solicitação criada. O dossiê aparece como solicitado neste protótipo.",
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.07),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-4 md:px-8 md:py-6">
       <div className="mx-auto max-w-[1480px] space-y-6">
@@ -207,20 +395,42 @@ export default function DiscoverOpportunityDetail({
           <div className="relative grid grid-cols-1 gap-6 lg:grid-cols-[1fr_0.9fr] lg:items-end">
             <div>
               <div className="flex flex-wrap gap-2">
-                <ToneBadge tone="blue">Descobrir</ToneBadge>
+                <ToneBadge tone="blue">Busca nacional</ToneBadge>
+                <ToneBadge tone="slate">Filtro ativo: Fortaleza, CE</ToneBadge>
                 <ToneBadge tone="green">3 ativos priorizados</ToneBadge>
-                <ToneBadge tone="amber">
-                  Validação documental pendente
-                </ToneBadge>
               </div>
               <h1 className="mt-5 text-4xl font-semibold tracking-tight text-slate-950 md:text-5xl">
-                Oportunidades em Fortaleza
+                Buscar oportunidades no Brasil
               </h1>
               <p className="mt-4 max-w-3xl text-base leading-relaxed text-slate-600 md:text-lg">
-                Busca inteligente de terrenos para incorporação residencial ou
-                uso misto, priorizando área, localização, potencial urbanístico,
-                liquidez e risco preliminar.
+                Digite uma tese de busca, selecione uma região no mapa e
+                ranqueie imóveis ou terrenos por localização, tamanho,
+                potencial urbanístico, liquidez, risco preliminar e
+                disponibilidade de dados.
               </p>
+              <div className="mt-5 rounded-[24px] border border-slate-200 bg-white/88 p-3 shadow-sm">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+                  <Input
+                    className="h-11 rounded-2xl border-slate-200 bg-slate-50/70 px-4 text-sm text-slate-700"
+                    onChange={(event) =>
+                      onSearchThesisChange?.(event.target.value)
+                    }
+                    value={searchThesisText}
+                  />
+                  <Button
+                    className="h-11 rounded-2xl bg-slate-950 px-5 text-white hover:bg-slate-900"
+                    onClick={applySearchThesis}
+                    type="button"
+                  >
+                    Rodar tese
+                  </Button>
+                </div>
+                {searchNotice ? (
+                  <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
+                    {searchNotice}
+                  </div>
+                ) : null}
+              </div>
             </div>
 
             <div className="rounded-[26px] border border-slate-200 bg-white/86 p-5 shadow-sm">
@@ -258,6 +468,94 @@ export default function DiscoverOpportunityDetail({
                       description="Critérios usados para ranquear os ativos encontrados."
                     />
                     <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {[
+                        {
+                          key: "state" as const,
+                          label: "Estado",
+                          options: ["Todos", ...stateOptions],
+                        },
+                        {
+                          key: "city" as const,
+                          label: "Cidade",
+                          options: ["Todas", ...cityOptions],
+                        },
+                        {
+                          key: "region" as const,
+                          label: "Região",
+                          options: ["Todas", ...regionOptions],
+                        },
+                        {
+                          key: "assetType" as const,
+                          label: "Tipo",
+                          options: ["Todos", ...assetTypeOptions],
+                        },
+                        {
+                          key: "targetUse" as const,
+                          label: "Uso alvo",
+                          options: ["Todos", ...targetUseOptions],
+                        },
+                        {
+                          key: "dataAvailability" as const,
+                          label: "Dados",
+                          options: ["Todas", "low", "medium", "high"],
+                        },
+                      ].map((filter) => (
+                        <label
+                          className="rounded-2xl border border-slate-200 bg-white p-3"
+                          key={filter.key}
+                        >
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                            {filter.label}
+                          </span>
+                          <select
+                            className="mt-2 h-9 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-800 outline-none"
+                            onChange={(event) =>
+                              updateDraftFilter(filter.key, event.target.value)
+                            }
+                            value={draftFilters[filter.key]}
+                          >
+                            {filter.options.map((option) => (
+                              <option key={option} value={option}>
+                                {option === "low" ||
+                                option === "medium" ||
+                                option === "high"
+                                  ? dataAvailabilityLabels[
+                                      option as Opportunity["dataAvailability"]
+                                    ]
+                                  : option}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ))}
+                      <label className="rounded-2xl border border-slate-200 bg-white p-3">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                          Área min
+                        </span>
+                        <Input
+                          className="mt-2 h-9 rounded-xl border-slate-200 bg-slate-50 text-sm"
+                          onChange={(event) =>
+                            updateDraftFilter("areaMin", event.target.value)
+                          }
+                          type="number"
+                          value={draftFilters.areaMin}
+                        />
+                      </label>
+                      <label className="rounded-2xl border border-slate-200 bg-white p-3">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                          Área max
+                        </span>
+                        <Input
+                          className="mt-2 h-9 rounded-xl border-slate-200 bg-slate-50 text-sm"
+                          onChange={(event) =>
+                            updateDraftFilter("areaMax", event.target.value)
+                          }
+                          type="number"
+                          value={draftFilters.areaMax}
+                        />
+                      </label>
+                    </div>
+                    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                       {filters.map(([label, value]) => (
                         <div
                           key={label}
@@ -274,11 +572,7 @@ export default function DiscoverOpportunityDetail({
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    {[
-                      ["Candidatos", "12"],
-                      ["Shortlist", "3"],
-                      ["Melhor fit", "86"],
-                    ].map(([label, value]) => (
+                    {dynamicThesisMetrics.map(([label, value]) => (
                       <div
                         key={label}
                         className="min-w-0 rounded-2xl border border-slate-200 bg-white px-2 py-3 text-center shadow-sm"
@@ -294,34 +588,27 @@ export default function DiscoverOpportunityDetail({
                   </div>
                 </div>
 
-                <div className="relative min-h-[360px] overflow-hidden bg-slate-900">
-                  <div className="absolute inset-0 bg-[linear-gradient(135deg,#dbeafe_0%,#f8fafc_32%,#e2e8f0_33%,#f8fafc_39%,#bfdbfe_100%)] opacity-95" />
-                  <div className="absolute left-[15%] top-[20%] h-[42%] w-[32%] rotate-[-7deg] rounded-[28px] border-2 border-emerald-700/70 bg-emerald-100/30" />
-                  <div className="absolute right-[18%] top-[18%] h-[34%] w-[24%] rotate-[10deg] rounded-[24px] border-2 border-amber-700/60 bg-amber-100/25" />
-                  <div className="absolute bottom-[18%] left-[42%] h-[30%] w-[28%] rotate-[4deg] rounded-[24px] border-2 border-slate-700/60 bg-white/20" />
-
-                  <div className="absolute left-[29%] top-[39%] flex h-12 w-12 items-center justify-center rounded-full bg-slate-950 text-white shadow-xl">
-                    <MapPin className="h-5 w-5" />
+                <div className="relative p-3">
+                  <OpportunityMap
+                    opportunities={candidates}
+                    onSelectOpportunity={selectCandidate}
+                    selectedOpportunityId={selectedCandidate?.id}
+                  />
+                  <div className="pointer-events-none absolute left-6 top-6 rounded-full border border-white/70 bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">
+                    Mapa real · filtro aplicado
                   </div>
-                  <div className="absolute right-[27%] top-[31%] flex h-10 w-10 items-center justify-center rounded-full bg-amber-600 text-white shadow-xl">
-                    <MapPin className="h-4 w-4" />
+                  <div className="pointer-events-none absolute left-6 top-16 rounded-full border border-white/70 bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">
+                    Filtro ativo: {appliedFilters.city === "Todas" ? "Brasil" : `${appliedFilters.city}, ${appliedFilters.state}`}
                   </div>
-                  <div className="absolute bottom-[27%] left-[52%] flex h-10 w-10 items-center justify-center rounded-full bg-slate-600 text-white shadow-xl">
-                    <MapPin className="h-4 w-4" />
+                  <div className="pointer-events-none absolute right-6 top-6 max-w-[230px] rounded-full border border-white/70 bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">
+                    Arquitetura preparada para busca nacional
                   </div>
-
-                  <div className="absolute left-5 top-5 rounded-full border border-white/70 bg-white/85 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">
-                    Mapa conceitual · Fortaleza
-                  </div>
-                  <div className="absolute right-5 top-5 rounded-full border border-white/70 bg-white/85 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">
-                    Camada de sourcing ativa
-                  </div>
-                  <div className="absolute bottom-5 left-5 rounded-2xl border border-white/60 bg-white/86 px-4 py-3 shadow-sm backdrop-blur">
+                  <div className="pointer-events-none absolute bottom-6 left-6 rounded-2xl border border-white/60 bg-white/90 px-4 py-3 shadow-sm backdrop-blur">
                     <div className="text-sm font-semibold text-slate-950">
-                      3 oportunidades ranqueadas
+                      {resultCount} oportunidades filtradas
                     </div>
                     <div className="text-xs text-slate-500">
-                      Fit score · potencial · risco preliminar
+                      Clique em um marcador para selecionar o ativo
                     </div>
                   </div>
                 </div>
@@ -338,11 +625,20 @@ export default function DiscoverOpportunityDetail({
                 {candidates.map((item) => (
                   <div
                     key={item.id}
-                    className={`rounded-[24px] border p-4 transition ${
+                    className={`cursor-pointer rounded-[24px] border p-4 transition ${
                       item.selected
                         ? "border-slate-200 bg-slate-50/70 shadow-sm"
-                        : "border-slate-200 bg-white"
+                        : "border-slate-200 bg-white hover:bg-slate-50/70"
                     }`}
+                    onClick={() => selectCandidate(item.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        selectCandidate(item.id);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
                   >
                     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.75fr_0.9fr] lg:items-center">
                       <div className="flex min-w-0 gap-3">
@@ -363,7 +659,7 @@ export default function DiscoverOpportunityDetail({
                             {item.title}
                           </div>
                           <div className="mt-1 text-sm text-slate-500">
-                            {item.location} · {item.area}
+                            {item.location} · {item.areaLabel}
                           </div>
                         </div>
                       </div>
@@ -372,34 +668,97 @@ export default function DiscoverOpportunityDetail({
                         <div className="mb-2 flex items-center justify-between text-sm">
                           <span className="text-slate-500">Fit score</span>
                           <span className="font-semibold text-slate-950">
-                            {item.fit}/100
+                            {item.fitScore}/100
                           </span>
                         </div>
-                        <Progress value={item.fit} className="h-2" />
+                        <Progress value={item.fitScore} className="h-2" />
                       </div>
 
                       <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3">
                         <div className="text-sm font-semibold leading-snug text-slate-900">
-                          {item.value}
+                          {item.valueRange}
                         </div>
                         <div className="mt-1 text-sm leading-relaxed text-slate-500">
                           {item.thesis}
                         </div>
+                        <div className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+                          {[
+                            [
+                              "Dados disponíveis",
+                              dataAvailabilityLabels[item.dataAvailability],
+                            ],
+                            ["Fonte principal", item.primarySourceLabel],
+                            ["Dossiê", item.dossierLabel],
+                          ].map(([label, value]) => (
+                            <div
+                              key={label}
+                              className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2"
+                            >
+                              <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                                {label}
+                              </div>
+                              <div className="mt-1 font-medium leading-snug text-slate-800">
+                                {value}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {item.previewNote ? (
+                          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
+                            {item.previewNote}
+                          </div>
+                        ) : null}
                         <div className="mt-3 flex flex-wrap gap-2">
-                          <ToneBadge tone={item.risk === "Alto" ? "red" : "amber"}>
-                            {item.risk}
+                          <ToneBadge tone={item.riskLevel === "high" ? "red" : "amber"}>
+                            {item.riskLabel}
                           </ToneBadge>
                           <ToneBadge
                             tone={
-                              item.status === "Promissor"
+                              item.statusLabel === "Promissor"
                                 ? "green"
-                                : item.status === "Atenção"
+                                : item.statusLabel === "Atenção"
                                   ? "amber"
                                   : "blue"
                             }
                           >
-                            {item.status}
+                            {item.statusLabel}
                           </ToneBadge>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button
+                            variant="outline"
+                            className="h-9 rounded-xl border-slate-200 bg-white px-3 text-xs"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              selectCandidate(item.id);
+                            }}
+                            type="button"
+                          >
+                            Ver prévia
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="h-9 rounded-xl border-slate-200 bg-white px-3 text-xs"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              selectCandidate(item.id);
+                              openDossierModal(item.id);
+                            }}
+                            type="button"
+                          >
+                            Solicitar dossiê
+                          </Button>
+                          <Button
+                            className="h-9 rounded-xl bg-slate-950 px-3 text-xs text-white hover:bg-slate-900"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              selectCandidate(item.id);
+                              onAnalyze?.(item.id);
+                            }}
+                            type="button"
+                          >
+                            Analisar ativo
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -412,7 +771,7 @@ export default function DiscoverOpportunityDetail({
               <ShellCard className="p-6">
                 <SectionTitle
                   eyebrow="Oportunidade selecionada"
-                  title="Por que Meireles foi priorizado"
+                  title={`Por que ${selectedOpportunityName} foi priorizado`}
                   description="Leitura inicial da tese de investimento."
                 />
                 <div className="mt-5 space-y-3">
@@ -488,7 +847,9 @@ export default function DiscoverOpportunityDetail({
                       key={item.title}
                       className="rounded-[24px] border border-slate-200 bg-white p-5"
                       onClick={
-                        item.title === "Analisar ativo" ? onAnalyze : undefined
+                        item.title === "Analisar ativo"
+                          ? () => onAnalyze?.(selectedCandidate?.id)
+                          : undefined
                       }
                       onKeyDown={(event) => {
                         if (
@@ -497,7 +858,7 @@ export default function DiscoverOpportunityDetail({
                           (event.key === "Enter" || event.key === " ")
                         ) {
                           event.preventDefault();
-                          onAnalyze();
+                          onAnalyze(selectedCandidate?.id);
                         }
                       }}
                       role={
@@ -528,6 +889,34 @@ export default function DiscoverOpportunityDetail({
           </main>
 
           <aside className="space-y-6 lg:sticky lg:top-8">
+            {dossierNotice ? (
+              <ShellCard className="border-emerald-200 bg-emerald-50/90 p-4 shadow-sm">
+                <div className="text-sm font-semibold text-emerald-950">
+                  Dossiê solicitado
+                </div>
+                <div className="mt-1 text-sm leading-relaxed text-emerald-800">
+                  {dossierNotice}
+                </div>
+              </ShellCard>
+            ) : null}
+
+            {showDossierPipeline ? (
+              <DossierFulfillmentPanel items={dossierFulfillmentItems} compact />
+            ) : (
+              <ShellCard className="p-5">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                  Pipeline do dossiê
+                </div>
+                <div className="mt-1 font-semibold text-slate-950">
+                  Coleta e validação sob demanda
+                </div>
+                <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                  Solicite o dossiê para acompanhar coleta, validação e entrega
+                  dos dados.
+                </p>
+              </ShellCard>
+            )}
+
             <ShellCard className="p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -535,7 +924,7 @@ export default function DiscoverOpportunityDetail({
                     Scorecard da oportunidade
                   </div>
                   <div className="mt-1 text-xl font-semibold tracking-tight text-slate-950">
-                    Meireles lidera a shortlist
+                    {selectedCandidate?.title ?? "Ativo selecionado"} na shortlist
                   </div>
                 </div>
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-white">
@@ -563,16 +952,48 @@ export default function DiscoverOpportunityDetail({
                     Fit
                   </div>
                   <div className="mt-1 font-semibold text-emerald-950">
-                    86/100
+                    {selectedCandidate?.fitScore ?? 0}/100
                   </div>
                 </div>
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
                   <div className="text-xs uppercase tracking-[0.14em] text-amber-600">
                     Risco
                   </div>
-                  <div className="mt-1 font-semibold text-amber-950">Médio</div>
+                  <div className="mt-1 font-semibold text-amber-950">
+                    {selectedCandidate?.riskLabel ?? "Médio"}
+                  </div>
                 </div>
               </div>
+            </ShellCard>
+
+            <ShellCard className="p-6">
+              <SectionTitle
+                title="Modelo de dados"
+                description="Como a oportunidade evolui de prévia gratuita para dossiê verificável."
+              />
+              <div className="mt-5 space-y-3">
+                {[
+                  "Prévia gratuita",
+                  "Dossiê sob demanda",
+                  "Dados verificados quando disponíveis",
+                  "Estimativas sinalizadas",
+                ].map((item) => (
+                  <div
+                    key={item}
+                    className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm font-medium text-slate-700"
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                className="mt-5 h-12 w-full rounded-2xl border-slate-200 bg-white"
+                onClick={() => openDossierModal()}
+                type="button"
+              >
+                Solicitar dossiê do imóvel
+              </Button>
             </ShellCard>
 
             <ShellCard className="p-6">
@@ -587,17 +1008,19 @@ export default function DiscoverOpportunityDetail({
                   </div>
                   <div>
                     <div className="font-semibold text-slate-950">
-                      Terreno · Meireles
+                      {selectedCandidate?.title ?? "Terreno · Meireles"}
                     </div>
                     <div className="mt-1 text-sm text-slate-500">
-                      1.240 m² · Fortaleza, CE
+                      {selectedCandidate?.areaLabel ?? "1.240 m²"} ·{" "}
+                      {selectedCandidate?.location ?? "Fortaleza, CE"}
                     </div>
                   </div>
                 </div>
                 <div className="mt-5 space-y-3">
                   <Button
                     className="h-12 w-full rounded-2xl bg-slate-950 text-white hover:bg-slate-900"
-                    onClick={onAnalyze}
+                    onClick={() => onAnalyze?.(selectedCandidate?.id)}
+                    type="button"
                   >
                     Analisar este ativo
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -671,7 +1094,7 @@ export default function DiscoverOpportunityDetail({
                     Candidatos
                   </div>
                   <div className="mt-1 text-xl font-semibold text-slate-950">
-                    12
+                    {candidateOptions.length}
                   </div>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -679,7 +1102,7 @@ export default function DiscoverOpportunityDetail({
                     Shortlist
                   </div>
                   <div className="mt-1 text-xl font-semibold text-slate-950">
-                    3
+                    {Math.min(resultCount, 3)}
                   </div>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -687,15 +1110,15 @@ export default function DiscoverOpportunityDetail({
                     Melhor fit
                   </div>
                   <div className="mt-1 text-xl font-semibold text-slate-950">
-                    86
+                    {bestFit || "—"}
                   </div>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-4">
                   <div className="text-xs uppercase tracking-[0.14em] text-slate-400">
-                    Dados pendentes
+                    Importados
                   </div>
                   <div className="mt-1 text-xl font-semibold text-slate-950">
-                    3
+                    {importedCount}
                   </div>
                 </div>
               </div>
@@ -703,6 +1126,15 @@ export default function DiscoverOpportunityDetail({
           </aside>
         </div>
       </div>
+      <DossierRequestModal
+        open={dossierModalOpen}
+        onClose={() => setDossierModalOpen(false)}
+        onConfirm={confirmDossierRequest}
+        propertyName={`${selectedCandidate?.title ?? tramitaMockData.dossierRequestPackage.propertyName} · ${
+          selectedCandidate?.location ??
+          tramitaMockData.dossierRequestPackage.propertyLocation
+        }`}
+      />
     </div>
   );
 }
