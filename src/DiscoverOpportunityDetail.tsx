@@ -554,27 +554,11 @@ export default function DiscoverOpportunityDetail({
 
                 <div className="relative p-3">
                   <OpportunityMap
+                    onAnalyzeOpportunity={onAnalyze}
                     opportunities={candidates}
                     onSelectOpportunity={selectCandidate}
                     selectedOpportunityId={selectedCandidate?.id}
                   />
-                  <div className="pointer-events-none absolute left-6 top-6 rounded-full border border-white/70 bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">
-                    Mapa real · filtro aplicado
-                  </div>
-                  <div className="pointer-events-none absolute left-6 top-16 rounded-full border border-white/70 bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">
-                    Filtro ativo: {appliedFilters.city === "Todas" ? "Brasil" : `${appliedFilters.city}, ${appliedFilters.state}`}
-                  </div>
-                  <div className="pointer-events-none absolute right-6 top-6 max-w-[230px] rounded-full border border-white/70 bg-white/90 px-3 py-1 text-xs font-medium text-slate-700 shadow-sm">
-                    Arquitetura preparada para busca nacional
-                  </div>
-                  <div className="pointer-events-none absolute bottom-6 left-6 rounded-2xl border border-white/60 bg-white/90 px-4 py-3 shadow-sm backdrop-blur">
-                    <div className="text-sm font-semibold text-slate-950">
-                      {resultCount} oportunidades filtradas
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      Clique em um marcador para selecionar o ativo
-                    </div>
-                  </div>
                 </div>
               </div>
             </ShellCard>
@@ -586,12 +570,12 @@ export default function DiscoverOpportunityDetail({
                 description="Ativos priorizados pela tese de busca e pelos sinais preliminares."
               />
               <div className="mt-5 space-y-3">
-                {candidates.map((item) => (
+                {candidates.map((item, index) => (
                   <div
                     key={item.id}
                     className={`cursor-pointer rounded-[24px] border p-4 transition ${
                       item.selected
-                        ? "border-slate-200 bg-slate-50/70 shadow-sm"
+                        ? "border-slate-950 bg-white shadow-[0_14px_34px_rgba(15,23,42,0.10)]"
                         : "border-slate-200 bg-white hover:bg-slate-50/70"
                     }`}
                     onClick={() => selectCandidate(item.id)}
@@ -609,15 +593,22 @@ export default function DiscoverOpportunityDetail({
                         <div
                           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
                             item.selected
-                              ? "bg-slate-950 text-white"
-                              : "bg-slate-50 text-slate-600"
+                              ? "bg-slate-950 text-white ring-4 ring-emerald-100"
+                              : "bg-slate-50 text-slate-700"
                           }`}
                         >
-                          <LandPlot className="h-5 w-5" />
+                          <span className="text-sm font-bold">
+                            {index + 1}
+                          </span>
                         </div>
                         <div className="min-w-0">
-                          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                            {item.id}
+                          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                            <span>{item.id}</span>
+                            {item.imported ? (
+                              <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-[0] text-blue-700">
+                                Importado
+                              </span>
+                            ) : null}
                           </div>
                           <div className="mt-1 text-xl font-semibold tracking-tight text-slate-950">
                             {item.title}

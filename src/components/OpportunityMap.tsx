@@ -1,21 +1,20 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import L from "leaflet";
-import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import {
+  MapContainer,
+  Marker,
+  Popup,
+  TileLayer,
+  Tooltip,
+  useMap,
+} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
-import markerIcon from "leaflet/dist/images/marker-icon.png";
-import markerShadow from "leaflet/dist/images/marker-shadow.png";
 
 import type { Opportunity } from "../types/tramita";
 
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: markerIcon2x,
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
-});
-
 type OpportunityMapProps = {
   center?: [number, number];
+  onAnalyzeOpportunity?: (opportunityId: string) => void;
   onSelectOpportunity?: (opportunityId: string) => void;
   opportunities: Opportunity[];
   selectedOpportunityId?: string;
@@ -29,12 +28,88 @@ const dataAvailabilityLabels: Record<Opportunity["dataAvailability"], string> =
     high: "Alta",
   };
 
-function MapFocus({
+const riskAccent: Record<Opportunity["riskLevel"], string> = {
+  low: "#059669",
+  medium: "#d97706",
+  high: "#dc2626",
+  unknown: "#64748b",
+};
+
+function createOpportunityIcon({
+  imported,
+  rank,
+  riskLevel,
+  selected,
+}: {
+  imported?: boolean;
+  rank: number;
+  riskLevel: Opportunity["riskLevel"];
+  selected: boolean;
+}) {
+  const size = selected ? 48 : 38;
+  const accent = riskAccent[riskLevel];
+  const ring = selected ? "0 0 0 6px rgba(16,185,129,0.24)" : "0 0 0 3px rgba(255,255,255,0.92)";
+
+  return L.divIcon({
+    className: "",
+    html: `
+      <div style="
+        position: relative;
+        width: ${size}px;
+        height: ${size}px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #020617;
+        border: 3px solid ${accent};
+        color: white;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-size: ${selected ? 16 : 14}px;
+        font-weight: 800;
+        line-height: 1;
+        box-shadow: ${ring}, 0 14px 30px rgba(15,23,42,0.32);
+      ">
+        ${rank}
+        ${
+          imported
+            ? `<span style="
+                position: absolute;
+                right: -4px;
+                bottom: -4px;
+                width: 18px;
+                height: 18px;
+                border-radius: 999px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: #2563eb;
+                border: 2px solid white;
+                color: white;
+                font-size: 10px;
+                font-weight: 800;
+              ">I</span>`
+            : ""
+        }
+      </div>
+    `,
+    iconAnchor: [size / 2, size / 2],
+    iconSize: [size, size],
+    popupAnchor: [0, -size / 2],
+    tooltipAnchor: [size / 2 + 8, -size / 2],
+  });
+}
+
+function MapAutoFocus({
+  center,
   opportunities,
   selectedOpportunityId,
+  zoom,
 }: {
+  center: [number, number];
   opportunities: Opportunity[];
   selectedOpportunityId?: string;
+  zoom: number;
 }) {
   const map = useMap();
 
@@ -45,7 +120,7 @@ function MapFocus({
 
     if (selected) {
       map.flyTo([selected.lat, selected.lng], Math.max(map.getZoom(), 13), {
-        duration: 0.45,
+        duration: 0.35,
       });
       return;
     }
@@ -54,37 +129,67 @@ function MapFocus({
       const bounds = L.latLngBounds(
         opportunities.map((opportunity) => [opportunity.lat, opportunity.lng]),
       );
-      map.fitBounds(bounds, { maxZoom: 13, padding: [28, 28] });
+      map.fitBounds(bounds, { maxZoom: 13, padding: [42, 42] });
+      return;
     }
-  }, [map, opportunities, selectedOpportunityId]);
+
+    if (opportunities.length === 1) {
+      map.flyTo([opportunities[0].lat, opportunities[0].lng], 13, {
+        duration: 0.35,
+      });
+      return;
+    }
+
+    map.setView(center, zoom);
+  }, [center, map, opportunities, selectedOpportunityId, zoom]);
 
   return null;
 }
 
 export default function OpportunityMap({
   center = [-3.735, -38.5],
+  onAnalyzeOpportunity,
   onSelectOpportunity,
   opportunities,
   selectedOpportunityId,
   zoom = 12,
 }: OpportunityMapProps) {
+  const selectedOpportunity = opportunities.find(
+    (opportunity) => opportunity.id === selectedOpportunityId,
+  );
+  const markerIcons = useMemo(
+    () =>
+      opportunities.map((opportunity, index) =>
+        createOpportunityIcon({
+          imported: opportunity.imported,
+          rank: index + 1,
+          riskLevel: opportunity.riskLevel,
+          selected: opportunity.id === selectedOpportunityId,
+        }),
+      ),
+    [opportunities, selectedOpportunityId],
+  );
+
   return (
-    <div className="h-[390px] overflow-hidden rounded-[28px] border border-slate-200 bg-slate-100 md:h-[440px]">
+    <div className="relative h-[390px] overflow-hidden rounded-[28px] border border-slate-200 bg-slate-100 md:h-[440px]">
       <MapContainer
         center={center}
         className="h-full w-full"
         scrollWheelZoom
         zoom={zoom}
+        zoomControl
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <MapFocus
+        <MapAutoFocus
+          center={center}
           opportunities={opportunities}
           selectedOpportunityId={selectedOpportunityId}
+          zoom={zoom}
         />
-        {opportunities.map((opportunity) => {
+        {opportunities.map((opportunity, index) => {
           const selected = opportunity.id === selectedOpportunityId;
 
           return (
@@ -92,11 +197,29 @@ export default function OpportunityMap({
               eventHandlers={{
                 click: () => onSelectOpportunity?.(opportunity.id),
               }}
+              icon={markerIcons[index]}
               key={opportunity.id}
               position={[opportunity.lat, opportunity.lng]}
+              zIndexOffset={selected ? 1000 : index}
             >
+              {selected ? (
+                <Tooltip
+                  className="!rounded-2xl !border-slate-200 !bg-white/95 !px-3 !py-2 !text-slate-900 !shadow-lg"
+                  direction="right"
+                  offset={[18, 0]}
+                  opacity={1}
+                  permanent
+                >
+                  <div className="text-xs font-semibold">
+                    {opportunity.title}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-slate-500">
+                    Fit {opportunity.fitScore}/100
+                  </div>
+                </Tooltip>
+              ) : null}
               <Popup>
-                <div className="min-w-[190px] space-y-2 font-sans">
+                <div className="min-w-[220px] space-y-3 font-sans">
                   <div>
                     <div className="text-sm font-semibold text-slate-950">
                       {opportunity.title}
@@ -106,36 +229,100 @@ export default function OpportunityMap({
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5">
-                      <div className="text-slate-500">Fit</div>
-                      <div className="font-semibold text-slate-950">
-                        {opportunity.fitScore}/100
+                    {[
+                      ["Área", opportunity.areaLabel],
+                      ["Fit", `${opportunity.fitScore}/100`],
+                      [
+                        "Dados",
+                        dataAvailabilityLabels[opportunity.dataAvailability],
+                      ],
+                      [
+                        "Fonte",
+                        opportunity.sourceLabel ?? opportunity.primarySourceLabel,
+                      ],
+                    ].map(([label, value]) => (
+                      <div
+                        className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5"
+                        key={label}
+                      >
+                        <div className="text-slate-500">{label}</div>
+                        <div className="font-semibold text-slate-950">
+                          {value}
+                        </div>
                       </div>
-                    </div>
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5">
-                      <div className="text-slate-500">Dados</div>
-                      <div className="font-semibold text-slate-950">
-                        {dataAvailabilityLabels[opportunity.dataAvailability]}
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                  <button
-                    className={`w-full rounded-xl px-3 py-2 text-xs font-semibold transition ${
-                      selected
-                        ? "bg-slate-200 text-slate-700"
-                        : "bg-slate-950 text-white hover:bg-slate-800"
-                    }`}
-                    onClick={() => onSelectOpportunity?.(opportunity.id)}
-                    type="button"
-                  >
-                    {selected ? "Selecionado" : "Selecionar"}
-                  </button>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <button
+                      className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${
+                        selected
+                          ? "bg-slate-200 text-slate-700"
+                          : "bg-slate-950 text-white hover:bg-slate-800"
+                      }`}
+                      onClick={() => onSelectOpportunity?.(opportunity.id)}
+                      type="button"
+                    >
+                      {selected ? "Selecionado" : "Selecionar"}
+                    </button>
+                    <button
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                      onClick={() => onAnalyzeOpportunity?.(opportunity.id)}
+                      type="button"
+                    >
+                      Analisar
+                    </button>
+                  </div>
                 </div>
               </Popup>
             </Marker>
           );
         })}
       </MapContainer>
+
+      <div className="pointer-events-none absolute right-4 top-4 z-[500] w-[210px] rounded-2xl border border-white/70 bg-white/92 p-3 text-xs text-slate-600 shadow-lg backdrop-blur">
+        <div className="font-semibold text-slate-950">Mapa de oportunidades</div>
+        <div className="mt-2 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="h-4 w-4 rounded-full border-2 border-amber-500 bg-slate-950 shadow-sm" />
+            oportunidade
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="h-4 w-4 rounded-full border-2 border-emerald-500 bg-slate-950 shadow-[0_0_0_4px_rgba(16,185,129,0.22)]" />
+            selecionada
+          </div>
+          <div className="text-slate-500">Clique no marcador para selecionar.</div>
+        </div>
+      </div>
+
+      {selectedOpportunity ? (
+        <div className="absolute bottom-4 left-4 z-[500] max-w-[300px] rounded-2xl border border-white/70 bg-white/94 p-4 shadow-xl backdrop-blur">
+          <div className="text-sm font-semibold text-slate-950">
+            {selectedOpportunity.title}
+          </div>
+          <div className="mt-1 text-xs text-slate-500">
+            {selectedOpportunity.region} · {selectedOpportunity.city}
+          </div>
+          <div className="mt-3 flex items-center gap-2 text-xs text-slate-600">
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700">
+              Fit {selectedOpportunity.fitScore}/100
+            </span>
+            {selectedOpportunity.imported ? (
+              <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 font-semibold text-blue-700">
+                Importado
+              </span>
+            ) : null}
+          </div>
+          {onAnalyzeOpportunity ? (
+            <button
+              className="mt-3 w-full rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+              onClick={() => onAnalyzeOpportunity(selectedOpportunity.id)}
+              type="button"
+            >
+              Analisar ativo
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
