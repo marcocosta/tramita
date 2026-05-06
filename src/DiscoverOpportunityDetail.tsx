@@ -181,6 +181,18 @@ function ToneBadge({
   );
 }
 
+function getToneClass(tone: "green" | "amber" | "red" | "slate" | "blue") {
+  const map = {
+    green: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    amber: "border-amber-200 bg-amber-50 text-amber-700",
+    red: "border-red-200 bg-red-50 text-red-700",
+    slate: "border-slate-200 bg-slate-50 text-slate-700",
+    blue: "border-blue-200 bg-blue-50 text-blue-700",
+  };
+
+  return map[tone];
+}
+
 function ScoreRow({
   label,
   value,
@@ -197,6 +209,149 @@ function ScoreRow({
         <span className="font-semibold text-slate-900">{value}</span>
       </div>
       <Progress value={progress} className="h-2" />
+    </div>
+  );
+}
+
+function getOpportunityHeroTone(opportunity: Opportunity) {
+  if (opportunity.imported) {
+    return {
+      badge: "border-blue-200 bg-blue-50 text-blue-700",
+      line: "border-blue-300/70 bg-blue-100/25",
+      surface:
+        "border-blue-200/80 bg-[radial-gradient(circle_at_12%_16%,rgba(37,99,235,0.12),transparent_30%),linear-gradient(135deg,#ffffff_0%,#f8fafc_45%,#eff6ff_100%)]",
+    };
+  }
+
+  if (opportunity.riskLevel === "high") {
+    return {
+      badge: "border-red-200 bg-red-50 text-red-700",
+      line: "border-red-300/70 bg-red-100/20",
+      surface:
+        "border-red-200/80 bg-[radial-gradient(circle_at_12%_16%,rgba(220,38,38,0.10),transparent_30%),linear-gradient(135deg,#ffffff_0%,#f8fafc_48%,#fef2f2_100%)]",
+    };
+  }
+
+  if (opportunity.dataAvailability === "high") {
+    return {
+      badge: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      line: "border-emerald-300/70 bg-emerald-100/20",
+      surface:
+        "border-emerald-200/80 bg-[radial-gradient(circle_at_12%_16%,rgba(5,150,105,0.10),transparent_30%),linear-gradient(135deg,#ffffff_0%,#f8fafc_45%,#ecfdf5_100%)]",
+    };
+  }
+
+  return {
+    badge: "border-slate-200 bg-white/80 text-slate-700",
+    line: "border-slate-300/70 bg-white/20",
+    surface:
+      "border-slate-200/80 bg-[radial-gradient(circle_at_12%_16%,rgba(15,23,42,0.09),transparent_30%),linear-gradient(135deg,#ffffff_0%,#f8fafc_45%,#eef2f7_100%)]",
+  };
+}
+
+function getRiskTone(
+  riskLevel: Opportunity["riskLevel"],
+): "green" | "amber" | "red" | "slate" | "blue" {
+  if (riskLevel === "low") {
+    return "green";
+  }
+  if (riskLevel === "high") {
+    return "red";
+  }
+  if (riskLevel === "unknown") {
+    return "slate";
+  }
+  return "amber";
+}
+
+function getDataTone(
+  dataAvailability: Opportunity["dataAvailability"],
+): "green" | "amber" | "red" | "slate" | "blue" {
+  if (dataAvailability === "high") {
+    return "green";
+  }
+  if (dataAvailability === "low") {
+    return "slate";
+  }
+  return "amber";
+}
+
+function getOpportunitySignal(opportunity: Opportunity) {
+  if (opportunity.imported) {
+    return "Dados importados · validação recomendada.";
+  }
+  if (opportunity.fitScore >= 80) {
+    return "Boa combinação inicial com a tese.";
+  }
+  if (opportunity.riskLevel === "high") {
+    return "Potencial exige validação cuidadosa.";
+  }
+  return "Encaixe preliminar em observação.";
+}
+
+function OpportunityCardHero({
+  opportunity,
+  rank,
+  selected,
+}: {
+  opportunity: Opportunity;
+  rank: number;
+  selected: boolean;
+}) {
+  const tone = getOpportunityHeroTone(opportunity);
+  const sourceLabel = opportunity.sourceLabel ?? opportunity.primarySourceLabel;
+
+  return (
+    <div
+      className={`relative overflow-hidden rounded-[18px] border p-2.5 ${tone.surface}`}
+    >
+      <div className="absolute inset-x-4 top-4 h-px bg-slate-300/35" />
+      <div className="absolute inset-y-3 left-8 w-px bg-slate-300/25" />
+      <div
+        className={`absolute right-2 top-2 h-8 w-14 rotate-[-8deg] rounded-[12px] border ${tone.line}`}
+      />
+      <div
+        className={`absolute bottom-2 right-8 h-7 w-12 rotate-[7deg] rounded-[10px] border ${tone.line}`}
+      />
+
+      <div className="relative flex min-w-0 items-start gap-2.5">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-sm font-bold text-white shadow-sm">
+          {rank}
+        </div>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+            <span>{opportunity.id}</span>
+            {selected ? (
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-[0] text-emerald-700">
+                Selecionado
+              </span>
+            ) : null}
+            {opportunity.imported ? (
+              <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-[0] text-blue-700">
+                Importado
+              </span>
+            ) : null}
+          </div>
+          <div className="mt-0.5 text-base font-semibold leading-snug tracking-tight text-slate-950">
+            {opportunity.title}
+          </div>
+          <div className="mt-0.5 text-sm leading-snug text-slate-500">
+            {opportunity.region} · {opportunity.city} · {opportunity.areaLabel}
+          </div>
+        </div>
+      </div>
+
+      <div className="relative mt-2 flex flex-wrap gap-1.5">
+        <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${tone.badge}`}>
+          {opportunity.assetType}
+        </span>
+        <span className="rounded-full border border-slate-200 bg-white/80 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+          {sourceLabel}
+        </span>
+        <span className="rounded-full border border-slate-200 bg-white/80 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+          Dados {dataAvailabilityLabels[opportunity.dataAvailability].toLowerCase()}
+        </span>
+      </div>
     </div>
   );
 }
@@ -301,6 +456,10 @@ export default function DiscoverOpportunityDetail({
     ["Candidatos", String(resultCount)],
     ["Shortlist", String(Math.min(resultCount, 3))],
     ["Melhor fit", bestFit ? String(bestFit) : "—"],
+    [
+      "Importados",
+      String(candidates.filter((candidate) => candidate.imported).length),
+    ],
   ] as const;
   const importedCount = candidateOptions.filter((candidate) => candidate.imported)
     .length;
@@ -439,14 +598,14 @@ export default function DiscoverOpportunityDetail({
           <main className="space-y-6">
             <ShellCard className="overflow-hidden">
               <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr]">
-                <div className="flex flex-col justify-between gap-5 p-5 md:p-6">
+                <div className="flex flex-col justify-between gap-4 p-4 md:p-5">
                   <div>
                     <SectionTitle
-                    eyebrow="Tese de busca"
+                      eyebrow="Tese de busca"
                       title="Tese de busca"
                       description="Critérios usados para ranquear os ativos encontrados."
                     />
-                    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                       {[
                         {
                           key: "state" as const,
@@ -480,7 +639,7 @@ export default function DiscoverOpportunityDetail({
                         },
                       ].map((filter) => (
                         <label
-                          className="rounded-2xl border border-slate-200 bg-white p-3"
+                          className="rounded-2xl border border-slate-200 bg-white p-2.5"
                           key={filter.key}
                         >
                           <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
@@ -507,7 +666,7 @@ export default function DiscoverOpportunityDetail({
                           </select>
                         </label>
                       ))}
-                      <label className="rounded-2xl border border-slate-200 bg-white p-3">
+                      <label className="rounded-2xl border border-slate-200 bg-white p-2.5">
                         <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                           Área min
                         </span>
@@ -520,7 +679,7 @@ export default function DiscoverOpportunityDetail({
                           value={draftFilters.areaMin}
                         />
                       </label>
-                      <label className="rounded-2xl border border-slate-200 bg-white p-3">
+                      <label className="rounded-2xl border border-slate-200 bg-white p-2.5">
                         <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                           Área max
                         </span>
@@ -535,7 +694,7 @@ export default function DiscoverOpportunityDetail({
                       </label>
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {dynamicThesisMetrics.map(([label, value]) => (
                       <div
                         key={label}
@@ -569,156 +728,149 @@ export default function DiscoverOpportunityDetail({
                 title="Oportunidades encontradas"
                 description="Ativos priorizados pela tese de busca e pelos sinais preliminares."
               />
-              <div className="mt-5 space-y-3">
-                {candidates.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className={`cursor-pointer rounded-[24px] border p-4 transition ${
-                      item.selected
-                        ? "border-slate-950 bg-white shadow-[0_14px_34px_rgba(15,23,42,0.10)]"
-                        : "border-slate-200 bg-white hover:bg-slate-50/70"
-                    }`}
-                    onClick={() => selectCandidate(item.id)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        selectCandidate(item.id);
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.75fr_0.9fr] lg:items-center">
-                      <div className="flex min-w-0 gap-3">
-                        <div
-                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
-                            item.selected
-                              ? "bg-slate-950 text-white ring-4 ring-emerald-100"
-                              : "bg-slate-50 text-slate-700"
-                          }`}
-                        >
-                          <span className="text-sm font-bold">
-                            {index + 1}
-                          </span>
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
-                            <span>{item.id}</span>
-                            {item.imported ? (
-                              <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-[0] text-blue-700">
-                                Importado
-                              </span>
-                            ) : null}
-                          </div>
-                          <div className="mt-1 text-xl font-semibold tracking-tight text-slate-950">
-                            {item.title}
-                          </div>
-                          <div className="mt-1 text-sm text-slate-500">
-                            {item.region} · {item.location} · {item.areaLabel}
-                          </div>
-                        </div>
-                      </div>
+              <div className="mt-4 space-y-2.5">
+                {candidates.map((item, index) => {
+                  const sourceLabel =
+                    item.sourceLabel ?? item.primarySourceLabel;
+                  const statusTone =
+                    item.statusLabel === "Promissor"
+                      ? "green"
+                      : item.statusLabel === "Atenção"
+                        ? "amber"
+                        : item.imported
+                          ? "blue"
+                          : "slate";
 
-                      <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3">
-                        <div className="mb-2 flex items-center justify-between text-sm">
-                          <span className="text-slate-500">Fit score</span>
-                          <span className="font-semibold text-slate-950">
-                            {item.fitScore}/100
-                          </span>
-                        </div>
-                        <Progress value={item.fitScore} className="h-2" />
-                      </div>
+                  return (
+                    <div
+                      key={item.id}
+                      className={`cursor-pointer rounded-[24px] border p-2.5 transition ${
+                        item.selected
+                          ? "border-slate-950 bg-slate-50/80 shadow-[0_12px_30px_rgba(15,23,42,0.11)]"
+                          : "border-slate-200 bg-white/95 hover:border-slate-300 hover:bg-white"
+                      }`}
+                      onClick={() => selectCandidate(item.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          selectCandidate(item.id);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[1fr_0.78fr] xl:grid-cols-[1.08fr_230px_0.92fr] xl:items-center">
+                        <OpportunityCardHero
+                          opportunity={item}
+                          rank={index + 1}
+                          selected={item.selected}
+                        />
 
-                      <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3">
-                        <div className="text-sm font-semibold leading-snug text-slate-900">
-                          {item.valueRange}
-                        </div>
-                        <div className="mt-1 text-sm leading-relaxed text-slate-500">
-                          {item.thesis}
-                        </div>
-                        <div className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-                          {[
-                            [
-                              "Dados disponíveis",
-                              dataAvailabilityLabels[item.dataAvailability],
-                            ],
-                            ["Fonte principal", item.primarySourceLabel],
-                            ["Dossiê", item.dossierLabel],
-                          ].map(([label, value]) => (
-                            <div
-                              key={label}
-                              className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2"
+                        <div className="flex min-w-0 flex-col justify-center rounded-[18px] border border-slate-200 bg-slate-50/70 p-2.5">
+                          <div className="mb-2 flex items-center justify-between gap-3">
+                            <span className="text-sm text-slate-500">Fit</span>
+                            <span className="text-sm font-semibold text-slate-950">
+                              {item.fitScore}/100
+                            </span>
+                          </div>
+                          <Progress value={item.fitScore} className="h-2" />
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            <span
+                              className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${getToneClass(
+                                getRiskTone(item.riskLevel),
+                              )}`}
                             >
-                              <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                                {label}
+                              Risco {item.riskLabel.toLowerCase()}
+                            </span>
+                            <span
+                              className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${getToneClass(
+                                getDataTone(item.dataAvailability),
+                              )}`}
+                            >
+                              Dados{" "}
+                              {dataAvailabilityLabels[
+                                item.dataAvailability
+                              ].toLowerCase()}
+                            </span>
+                          </div>
+                          <div className="mt-1.5 text-xs leading-snug text-slate-500">
+                            {getOpportunitySignal(item)}
+                          </div>
+                        </div>
+
+                        <div className="min-w-0 rounded-[18px] border border-slate-200 bg-white p-2.5 lg:col-span-2 xl:col-span-1">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                                Valor estimado
                               </div>
-                              <div className="mt-1 font-medium leading-snug text-slate-800">
-                                {value}
+                              <div className="mt-0.5 text-base font-semibold leading-snug text-slate-950">
+                                {item.valueRange}
                               </div>
                             </div>
-                          ))}
-                        </div>
-                        {item.previewNote ? (
-                          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
-                            {item.previewNote}
+                            <ToneBadge tone={statusTone}>
+                              {item.statusLabel}
+                            </ToneBadge>
                           </div>
-                        ) : null}
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <ToneBadge tone={item.riskLevel === "high" ? "red" : "amber"}>
-                            {item.riskLabel}
-                          </ToneBadge>
-                          <ToneBadge
-                            tone={
-                              item.statusLabel === "Promissor"
-                                ? "green"
-                                : item.statusLabel === "Atenção"
-                                  ? "amber"
-                                  : "blue"
-                            }
-                          >
-                            {item.statusLabel}
-                          </ToneBadge>
-                        </div>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <Button
-                            variant="outline"
-                            className="h-9 rounded-xl border-slate-200 bg-white px-3 text-xs"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              selectCandidate(item.id);
-                            }}
-                            type="button"
-                          >
-                            Ver prévia
-                          </Button>
-                          <Button
-                            variant="outline"
-                            className="h-9 rounded-xl border-slate-200 bg-white px-3 text-xs"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              selectCandidate(item.id);
-                              openDossierModal(item.id);
-                            }}
-                            type="button"
-                          >
-                            Solicitar dossiê
-                          </Button>
-                          <Button
-                            className="h-9 rounded-xl bg-slate-950 px-3 text-xs text-white hover:bg-slate-900"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              selectCandidate(item.id);
-                              onAnalyze?.(item.id);
-                            }}
-                            type="button"
-                          >
-                            Analisar ativo
-                          </Button>
+                          <div className="mt-1 text-sm leading-snug text-slate-500">
+                            {item.thesis}
+                          </div>
+                          <div className="mt-1.5 flex flex-wrap gap-1.5 text-xs">
+                            <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-medium text-slate-700">
+                              {sourceLabel}
+                            </span>
+                            <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-medium text-slate-700">
+                              {item.dossierLabel}
+                            </span>
+                            <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-medium text-slate-700">
+                              {item.targetUse.join(" / ")}
+                            </span>
+                          </div>
+                          {item.previewNote ? (
+                            <div className="mt-1.5 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs leading-snug text-amber-800">
+                              {item.previewNote}
+                            </div>
+                          ) : null}
+                          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                            <button
+                              className="px-1 text-xs font-semibold text-slate-500 transition hover:text-slate-950"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                selectCandidate(item.id);
+                              }}
+                              type="button"
+                            >
+                              Ver prévia
+                            </button>
+                            <Button
+                              variant="outline"
+                              className="h-8 rounded-xl border-slate-200 bg-white px-3 text-xs"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                selectCandidate(item.id);
+                                openDossierModal(item.id);
+                              }}
+                              type="button"
+                            >
+                              Dossiê
+                            </Button>
+                            <Button
+                              className="h-8 rounded-xl bg-slate-950 px-3 text-xs text-white hover:bg-slate-900"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                selectCandidate(item.id);
+                                onAnalyze?.(item.id);
+                              }}
+                              type="button"
+                            >
+                              Analisar
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </ShellCard>
 
