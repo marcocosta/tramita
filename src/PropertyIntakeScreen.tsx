@@ -3,6 +3,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Database,
+  FileText,
   FileSpreadsheet,
   PlusCircle,
   UploadCloud,
@@ -14,6 +15,8 @@ import { Input } from "@/components/ui/input";
 import type {
   ImportedOpportunityInput,
   Opportunity,
+  PropertyEvidenceDocument,
+  PropertyEvidenceDocumentInput,
   SourceType,
 } from "./types/tramita";
 
@@ -38,6 +41,41 @@ const dataAvailabilityLabels: Record<
   medium: "Média",
   high: "Alta",
 };
+
+const documentTypeOptions: Array<{
+  value: PropertyEvidenceDocument["documentType"];
+  label: string;
+}> = [
+  { value: "matricula", label: "Matrícula" },
+  { value: "iptu", label: "IPTU" },
+  { value: "cadastro_municipal", label: "Cadastro municipal" },
+  { value: "plano_diretor", label: "Plano Diretor" },
+  { value: "certidao", label: "Certidão" },
+  { value: "contrato", label: "Contrato" },
+  { value: "foto", label: "Foto" },
+  { value: "mapa", label: "Mapa" },
+  { value: "laudo", label: "Laudo" },
+  { value: "outro", label: "Outro" },
+];
+
+const evidenceStatusLabels: Record<
+  PropertyEvidenceDocument["status"],
+  string
+> = {
+  uploaded: "Recebido",
+  pending_review: "Em revisão",
+  validated: "Validado",
+  rejected: "Rejeitado",
+  expired: "Desatualizado",
+};
+
+const confidenceLabels: Record<PropertyEvidenceDocument["confidence"], string> =
+  {
+    low: "Baixa",
+    medium: "Média",
+    high: "Alta",
+    unknown: "A definir",
+  };
 
 type IntakeFormState = {
   title: string;
@@ -78,10 +116,38 @@ const initialForm: IntakeFormState = {
 };
 
 type PropertyIntakeScreenProps = {
+  evidenceDocuments?: PropertyEvidenceDocument[];
   importedOpportunities: Opportunity[];
+  onAddEvidenceDocument?: (input: PropertyEvidenceDocumentInput) => void;
   onAddOpportunity?: (input: ImportedOpportunityInput) => void;
   onGoDiscover?: (opportunityId?: string) => void;
   onImportOpportunities?: (inputs: ImportedOpportunityInput[]) => void;
+};
+
+type EvidenceFormState = {
+  propertyId: string;
+  title: string;
+  documentType: PropertyEvidenceDocument["documentType"];
+  sourceType: SourceType;
+  sourceLabel: string;
+  status: PropertyEvidenceDocument["status"];
+  confidence: PropertyEvidenceDocument["confidence"];
+  fileName: string;
+  unlocks: string;
+  notes: string;
+};
+
+const initialEvidenceForm: EvidenceFormState = {
+  propertyId: "",
+  title: "",
+  documentType: "matricula",
+  sourceType: "upload",
+  sourceLabel: "",
+  status: "uploaded",
+  confidence: "unknown",
+  fileName: "",
+  unlocks: "titularidade, ônus, situação fiscal",
+  notes: "",
 };
 
 function ShellCard({
@@ -236,13 +302,18 @@ function parseCsv(text: string) {
 }
 
 export default function PropertyIntakeScreen({
+  evidenceDocuments = [],
   importedOpportunities,
+  onAddEvidenceDocument,
   onAddOpportunity,
   onGoDiscover,
   onImportOpportunities,
 }: PropertyIntakeScreenProps) {
   const [form, setForm] = useState<IntakeFormState>(initialForm);
+  const [evidenceForm, setEvidenceForm] =
+    useState<EvidenceFormState>(initialEvidenceForm);
   const [notice, setNotice] = useState<string | null>(null);
+  const [evidenceNotice, setEvidenceNotice] = useState<string | null>(null);
   const [csvText, setCsvText] = useState("");
 
   function updateForm<K extends keyof IntakeFormState>(
@@ -250,6 +321,18 @@ export default function PropertyIntakeScreen({
     value: IntakeFormState[K],
   ) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateEvidenceForm<K extends keyof EvidenceFormState>(
+    key: K,
+    value: EvidenceFormState[K],
+  ) {
+    setEvidenceForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function getEvidenceCount(propertyId: string) {
+    return evidenceDocuments.filter((document) => document.propertyId === propertyId)
+      .length;
   }
 
   function handleSubmit() {
@@ -282,6 +365,41 @@ export default function PropertyIntakeScreen({
         skipped ? ` ${skipped} linha${skipped === 1 ? "" : "s"} ignorada${skipped === 1 ? "" : "s"}.` : ""
       }`,
     );
+  }
+
+  function handleEvidenceSubmit() {
+    const propertyId =
+      evidenceForm.propertyId || importedOpportunities[0]?.propertyId || "";
+
+    if (
+      !propertyId ||
+      !evidenceForm.title.trim() ||
+      !evidenceForm.documentType ||
+      !evidenceForm.sourceLabel.trim()
+    ) {
+      setEvidenceNotice(
+        "Preencha imóvel, título, tipo de documento e fonte/provedor.",
+      );
+      return;
+    }
+
+    onAddEvidenceDocument?.({
+      propertyId,
+      title: evidenceForm.title.trim(),
+      documentType: evidenceForm.documentType,
+      sourceType: evidenceForm.sourceType,
+      sourceLabel: evidenceForm.sourceLabel.trim(),
+      status: evidenceForm.status,
+      confidence: evidenceForm.confidence,
+      fileName: evidenceForm.fileName.trim() || undefined,
+      notes: evidenceForm.notes.trim() || undefined,
+      unlocks: evidenceForm.unlocks
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean),
+    });
+    setEvidenceForm({ ...initialEvidenceForm, propertyId });
+    setEvidenceNotice("Evidência adicionada ao dossiê do imóvel.");
   }
 
   return (
@@ -459,6 +577,218 @@ export default function PropertyIntakeScreen({
 
             <ShellCard className="p-5 md:p-6">
               <SectionTitle
+                eyebrow="Evidências"
+                title="Documentos e evidências"
+                description="Adicione metadados de documentos recebidos do parceiro. Nesta versão, os arquivos não são enviados para backend; o portal registra nome, tipo, fonte, status e finalidade."
+              />
+
+              {evidenceNotice ? (
+                <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+                  {evidenceNotice}
+                </div>
+              ) : null}
+
+              <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
+                <label className="rounded-2xl border border-slate-200 bg-white p-3 md:col-span-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Imóvel
+                  </span>
+                  <select
+                    className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-800 outline-none"
+                    disabled={importedOpportunities.length === 0}
+                    onChange={(event) =>
+                      updateEvidenceForm("propertyId", event.target.value)
+                    }
+                    value={
+                      evidenceForm.propertyId ||
+                      importedOpportunities[0]?.propertyId ||
+                      ""
+                    }
+                  >
+                    {importedOpportunities.length === 0 ? (
+                      <option value="">Cadastre uma oportunidade primeiro</option>
+                    ) : null}
+                    {importedOpportunities.map((opportunity) => (
+                      <option key={opportunity.propertyId} value={opportunity.propertyId}>
+                        {opportunity.title} · {opportunity.region}, {opportunity.city}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="rounded-2xl border border-slate-200 bg-white p-3">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Título do documento
+                  </span>
+                  <Input
+                    className="mt-2 h-10 rounded-xl border-slate-200 bg-slate-50 text-sm"
+                    onChange={(event) =>
+                      updateEvidenceForm("title", event.target.value)
+                    }
+                    placeholder="Matrícula atualizada"
+                    value={evidenceForm.title}
+                  />
+                </label>
+
+                <label className="rounded-2xl border border-slate-200 bg-white p-3">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Tipo de documento
+                  </span>
+                  <select
+                    className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-800 outline-none"
+                    onChange={(event) =>
+                      updateEvidenceForm(
+                        "documentType",
+                        event.target.value as PropertyEvidenceDocument["documentType"],
+                      )
+                    }
+                    value={evidenceForm.documentType}
+                  >
+                    {documentTypeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="rounded-2xl border border-slate-200 bg-white p-3">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Tipo de fonte
+                  </span>
+                  <select
+                    className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-800 outline-none"
+                    onChange={(event) =>
+                      updateEvidenceForm("sourceType", event.target.value as SourceType)
+                    }
+                    value={evidenceForm.sourceType}
+                  >
+                    {sourceTypeOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="rounded-2xl border border-slate-200 bg-white p-3">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Fonte/provedor
+                  </span>
+                  <Input
+                    className="mt-2 h-10 rounded-xl border-slate-200 bg-slate-50 text-sm"
+                    onChange={(event) =>
+                      updateEvidenceForm("sourceLabel", event.target.value)
+                    }
+                    placeholder="Cartório / parceiro local"
+                    value={evidenceForm.sourceLabel}
+                  />
+                </label>
+
+                <label className="rounded-2xl border border-slate-200 bg-white p-3">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Status
+                  </span>
+                  <select
+                    className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-800 outline-none"
+                    onChange={(event) =>
+                      updateEvidenceForm(
+                        "status",
+                        event.target.value as PropertyEvidenceDocument["status"],
+                      )
+                    }
+                    value={evidenceForm.status}
+                  >
+                    {Object.entries(evidenceStatusLabels).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="rounded-2xl border border-slate-200 bg-white p-3">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Confiança
+                  </span>
+                  <select
+                    className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-800 outline-none"
+                    onChange={(event) =>
+                      updateEvidenceForm(
+                        "confidence",
+                        event.target.value as PropertyEvidenceDocument["confidence"],
+                      )
+                    }
+                    value={evidenceForm.confidence}
+                  >
+                    {Object.entries(confidenceLabels).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="rounded-2xl border border-slate-200 bg-white p-3">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Nome do arquivo
+                  </span>
+                  <Input
+                    className="mt-2 h-10 rounded-xl border-slate-200 bg-slate-50 text-sm"
+                    onChange={(event) =>
+                      updateEvidenceForm("fileName", event.target.value)
+                    }
+                    placeholder="matricula-meireles.pdf"
+                    value={evidenceForm.fileName}
+                  />
+                </label>
+
+                <label className="rounded-2xl border border-slate-200 bg-white p-3">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    O que desbloqueia
+                  </span>
+                  <Input
+                    className="mt-2 h-10 rounded-xl border-slate-200 bg-slate-50 text-sm"
+                    onChange={(event) =>
+                      updateEvidenceForm("unlocks", event.target.value)
+                    }
+                    placeholder="titularidade, ônus, situação fiscal"
+                    value={evidenceForm.unlocks}
+                  />
+                </label>
+
+                <label className="rounded-2xl border border-slate-200 bg-white p-3 md:col-span-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Observações
+                  </span>
+                  <textarea
+                    className="mt-2 min-h-24 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none"
+                    onChange={(event) =>
+                      updateEvidenceForm("notes", event.target.value)
+                    }
+                    placeholder="Registro recebido para revisão, validade, pendências ou ressalvas."
+                    value={evidenceForm.notes}
+                  />
+                </label>
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <Button
+                  className="h-11 rounded-2xl bg-slate-950 px-5 text-white hover:bg-slate-900"
+                  onClick={handleEvidenceSubmit}
+                  type="button"
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Adicionar evidência
+                </Button>
+                <div className="text-sm text-slate-500">
+                  Metadados persistidos localmente; armazenamento de arquivo virá depois.
+                </div>
+              </div>
+            </ShellCard>
+
+            <ShellCard className="p-5 md:p-6">
+              <SectionTitle
                 eyebrow="CSV / parceiro"
                 title="Importar planilha simples"
                 description="Cole linhas CSV para simular upload de parceiro nesta versão frontend."
@@ -522,6 +852,9 @@ export default function PropertyIntakeScreen({
                         <Badge className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-blue-700">
                           Importado
                         </Badge>
+                      </div>
+                      <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-sm font-medium text-slate-700">
+                        Evidências: {getEvidenceCount(opportunity.propertyId)}
                       </div>
                       <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
                         <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2">

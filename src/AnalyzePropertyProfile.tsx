@@ -18,7 +18,12 @@ import { Progress } from "@/components/ui/progress";
 import DossierFulfillmentPanel from "./components/DossierFulfillmentPanel";
 import DossierRequestModal from "./components/DossierRequestModal";
 import { tramitaMockData } from "./data/tramitaMockData";
-import type { AnalysisSummary, Property } from "./types/tramita";
+import type {
+  AnalysisSummary,
+  Opportunity,
+  Property,
+  PropertyEvidenceDocument,
+} from "./types/tramita";
 
 const defaultSelectedProperty = tramitaMockData.selectedProperty;
 const defaultAnalysisSummary = tramitaMockData.analysisSummary;
@@ -62,6 +67,41 @@ const dataSources = tramitaMockData.propertySources.map((source) => ({
   tone: getSourceTone(source),
 }));
 
+const documentTypeLabels: Record<
+  PropertyEvidenceDocument["documentType"],
+  string
+> = {
+  matricula: "Matrícula",
+  iptu: "IPTU",
+  cadastro_municipal: "Cadastro municipal",
+  plano_diretor: "Plano Diretor",
+  certidao: "Certidão",
+  contrato: "Contrato",
+  foto: "Foto",
+  mapa: "Mapa",
+  laudo: "Laudo",
+  outro: "Outro",
+};
+
+const evidenceStatusLabels: Record<
+  PropertyEvidenceDocument["status"],
+  string
+> = {
+  uploaded: "Recebido",
+  pending_review: "Em revisão",
+  validated: "Validado",
+  rejected: "Rejeitado",
+  expired: "Desatualizado",
+};
+
+const confidenceLabels: Record<PropertyEvidenceDocument["confidence"], string> =
+  {
+    low: "Baixa",
+    medium: "Média",
+    high: "Alta",
+    unknown: "A definir",
+  };
+
 function ShellCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <div className={`rounded-[30px] border border-slate-200/80 bg-white/92 shadow-[0_12px_36px_rgba(15,23,42,0.07)] backdrop-blur ${className}`}>
@@ -103,19 +143,115 @@ function ScoreRow({ label, value, progress }: { label: string; value: string; pr
   );
 }
 
+function evidenceStatusTone(status: PropertyEvidenceDocument["status"]) {
+  if (status === "validated") {
+    return "green" as const;
+  }
+
+  if (status === "rejected" || status === "expired") {
+    return "red" as const;
+  }
+
+  if (status === "pending_review") {
+    return "amber" as const;
+  }
+
+  return "blue" as const;
+}
+
+function EvidenceDocumentsSection({
+  documents,
+}: {
+  documents: PropertyEvidenceDocument[];
+}) {
+  return (
+    <ShellCard className="p-6">
+      <SectionTitle
+        eyebrow="Evidências"
+        title="Documentos e evidências do imóvel"
+        description="Arquivos e registros recebidos ajudam a validar dados, reduzir incerteza e alimentar o dossiê."
+      />
+      {documents.length === 0 ? (
+        <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 p-5 text-sm leading-relaxed text-slate-500">
+          Nenhuma evidência adicionada para este imóvel ainda.
+        </div>
+      ) : (
+        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
+          {documents.map((document) => (
+            <div
+              className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4"
+              key={document.id}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-semibold text-slate-950">
+                    {document.title}
+                  </div>
+                  <div className="mt-1 text-sm text-slate-500">
+                    {documentTypeLabels[document.documentType]} · {document.sourceLabel}
+                  </div>
+                </div>
+                <ToneBadge tone={evidenceStatusTone(document.status)}>
+                  {evidenceStatusLabels[document.status]}
+                </ToneBadge>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
+                  Confiança: {confidenceLabels[document.confidence]}
+                </span>
+                <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
+                  {new Date(document.uploadedAt).toLocaleDateString("pt-BR")}
+                </span>
+              </div>
+              {document.fileName ? (
+                <div className="mt-3 text-sm text-slate-500">
+                  Arquivo: {document.fileName}
+                </div>
+              ) : null}
+              {document.unlocks.length > 0 ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {document.unlocks.map((unlock) => (
+                    <span
+                      className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700"
+                      key={unlock}
+                    >
+                      {unlock}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              {document.notes ? (
+                <p className="mt-3 text-sm leading-relaxed text-slate-500">
+                  {document.notes}
+                </p>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
+    </ShellCard>
+  );
+}
+
 type AnalyzePropertyProfileProps = {
   analysisSummary?: AnalysisSummary;
   dossierRequested?: boolean;
+  evidenceDocuments?: PropertyEvidenceDocument[];
+  onBackToDiscover?: () => void;
   onRequestDossier?: (propertyId: string) => void;
   onStartDueDiligence?: () => void;
+  selectedOpportunity?: Opportunity;
   selectedProperty?: Property;
 };
 
 export default function TramitaAnalyzePropertyProfile({
   analysisSummary = defaultAnalysisSummary,
   dossierRequested = false,
+  evidenceDocuments = [],
+  onBackToDiscover,
   onRequestDossier,
   onStartDueDiligence,
+  selectedOpportunity,
   selectedProperty = defaultSelectedProperty,
 }: AnalyzePropertyProfileProps) {
   const [dossierModalOpen, setDossierModalOpen] = useState(false);
@@ -123,13 +259,429 @@ export default function TramitaAnalyzePropertyProfile({
   const facts = selectedProperty.facts.map(
     ({ label, value }) => [label, value] as const,
   );
+  const isImportedOpportunity =
+    selectedOpportunity?.status === "Importado" ||
+    selectedOpportunity?.imported === true ||
+    selectedOpportunity?.id.startsWith("imported-") === true;
+  const availabilityConfidence = {
+    low: 38,
+    medium: 58,
+    high: 72,
+  } as const;
+  const availabilityLabels = {
+    low: "Baixa",
+    medium: "Média",
+    high: "Alta",
+  } as const;
   const showDossierRequested = dossierRequested || Boolean(dossierNotice);
+  const modalPropertyName = selectedOpportunity
+    ? `${selectedOpportunity.title} · ${selectedOpportunity.location}`
+    : `${tramitaMockData.dossierRequestPackage.propertyName} · ${tramitaMockData.dossierRequestPackage.propertyLocation}`;
 
   function confirmDossierRequest() {
     setDossierModalOpen(false);
     onRequestDossier?.(selectedProperty.id);
     setDossierNotice(
       "Solicitação criada. O dossiê aparece como solicitado neste protótipo.",
+    );
+  }
+
+  if (isImportedOpportunity && selectedOpportunity) {
+    const confidence =
+      availabilityConfidence[selectedOpportunity.dataAvailability];
+    const importedFacts = [
+      ["Área", selectedOpportunity.areaLabel],
+      ["Tipo", selectedOpportunity.assetType],
+      ["Região", selectedOpportunity.region],
+      ["Cidade", selectedOpportunity.city],
+      ["Estado", selectedOpportunity.state],
+      ["Fonte", selectedOpportunity.sourceLabel ?? selectedOpportunity.primarySourceLabel],
+      ["Disponibilidade", availabilityLabels[selectedOpportunity.dataAvailability]],
+      [
+        "Valor",
+        selectedOpportunity.value ??
+          selectedOpportunity.valueRange ??
+          selectedOpportunity.estimatedValueRange ??
+          selectedOpportunity.askingPrice ??
+          "A estimar",
+      ],
+      ["Matrícula", "Pendente"],
+      ["IPTU", "Pendente"],
+      ["Zona", "A confirmar"],
+    ] as const;
+    const importedSources = [
+      {
+        source: "Fonte principal",
+        status: "Informado",
+        confidence: availabilityLabels[selectedOpportunity.dataAvailability],
+        provided:
+          "localização, área, tipo, uso alvo e preço/faixa quando houver",
+        nextValidation: "solicitar dossiê",
+        tone: "blue" as const,
+      },
+      {
+        source: "Cartório/matrícula",
+        status: "Pendente",
+        confidence: "A definir",
+        provided: "titularidade, ônus e histórico dominial",
+        nextValidation: "solicitar matrícula atualizada",
+        tone: "amber" as const,
+      },
+      {
+        source: "Prefeitura/IPTU",
+        status: "Pendente",
+        confidence: "A definir",
+        provided: "cadastro municipal, área fiscal e débitos",
+        nextValidation: "consultar cadastro municipal",
+        tone: "amber" as const,
+      },
+      {
+        source: "Plano Diretor",
+        status: "A validar",
+        confidence: "Média",
+        provided: "uso permitido, coeficiente, recuos e altura",
+        nextValidation: "confirmar parâmetros oficiais",
+        tone: "slate" as const,
+      },
+      {
+        source: "Comparáveis",
+        status: "A validar",
+        confidence: "Média",
+        provided: "faixa revisada e liquidez",
+        nextValidation: "buscar comparáveis próximos",
+        tone: "slate" as const,
+      },
+      {
+        source: "Jurídico",
+        status: "Pendente",
+        confidence: "A definir",
+        provided: "risco documental e ressalvas",
+        nextValidation: "abrir pré-diligência",
+        tone: "amber" as const,
+      },
+    ];
+
+    return (
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.07),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-4 md:px-8 md:py-6">
+        <div className="mx-auto max-w-[1480px] space-y-6">
+          <ShellCard className="relative overflow-hidden p-5 md:p-7">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(15,23,42,0.06),transparent_24%),radial-gradient(circle_at_90%_12%,rgba(180,83,9,0.06),transparent_24%)]" />
+            <div className="relative grid grid-cols-1 gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+              <div>
+                <div className="flex flex-wrap gap-2">
+                  <ToneBadge tone="blue">Análise preliminar</ToneBadge>
+                  <ToneBadge tone="slate">Dados importados</ToneBadge>
+                  <ToneBadge tone="amber">Dossiê recomendado</ToneBadge>
+                </div>
+                <h1 className="mt-5 text-4xl font-semibold tracking-tight text-slate-950 md:text-5xl">
+                  {selectedOpportunity.title}
+                </h1>
+                <p className="mt-4 max-w-3xl text-base leading-relaxed text-slate-600 md:text-lg">
+                  {selectedOpportunity.areaLabel} · {selectedOpportunity.assetType} · {selectedOpportunity.region}, {selectedOpportunity.city} - {selectedOpportunity.state}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {[
+                  [
+                    "Valor estimado",
+                    selectedOpportunity.value ??
+                      selectedOpportunity.valueRange ??
+                      selectedOpportunity.estimatedValueRange ??
+                      "A estimar",
+                  ],
+                  ["Centro da faixa", "A definir"],
+                  ["Confiança", `${confidence}%`],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="rounded-3xl border border-slate-200 bg-white/80 p-4 shadow-sm"
+                  >
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      {label}
+                    </div>
+                    <div className="mt-2 text-lg font-semibold tracking-tight text-slate-950">
+                      {value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative mt-5 rounded-[26px] border border-slate-200 bg-white/88 p-4 shadow-sm backdrop-blur">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-800">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    Tramita insight
+                  </div>
+                  <div className="mt-1 text-lg font-semibold tracking-tight text-slate-950">
+                    Análise preliminar baseada em dados importados.
+                  </div>
+                  <p className="mt-2 max-w-4xl text-sm leading-relaxed text-slate-600">
+                    Este ativo foi adicionado por entrada manual, parceiro ou CSV. O Tramita usa os dados disponíveis para criar uma leitura inicial, mas matrícula, cadastro municipal, parâmetros urbanísticos e comparáveis ainda precisam ser validados.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </ShellCard>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+            <main className="space-y-6">
+              <ShellCard className="p-6">
+                <SectionTitle
+                  eyebrow="Localização"
+                  title="Localização informada"
+                  description="Coordenadas e origem declaradas pela fonte importada."
+                />
+                <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+                  {[
+                    ["Região", selectedOpportunity.region],
+                    ["Cidade", selectedOpportunity.city],
+                    ["Estado", selectedOpportunity.state],
+                    ["Latitude", String(selectedOpportunity.lat)],
+                    ["Longitude", String(selectedOpportunity.lng)],
+                    ["Fonte", selectedOpportunity.sourceLabel ?? selectedOpportunity.primarySourceLabel],
+                  ].map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4"
+                    >
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                        {label}
+                      </div>
+                      <div className="mt-2 text-sm font-semibold text-slate-950">
+                        {value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-5 rounded-[26px] border border-amber-200 bg-amber-50 p-5">
+                  <div className="font-semibold text-amber-950">
+                    Perímetro ainda não validado
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-amber-800">
+                    A localização foi informada pelo parceiro ou por entrada manual. O dossiê deve confirmar perímetro, titularidade, cadastro municipal e parâmetros urbanísticos.
+                  </p>
+                </div>
+              </ShellCard>
+
+              <ShellCard className="p-6">
+                <SectionTitle
+                  eyebrow="Dados importados"
+                  title="Dados principais"
+                  description="Informações disponíveis para a primeira leitura do ativo."
+                />
+                <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+                  {importedFacts.map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4"
+                    >
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                        {label}
+                      </div>
+                      <div className="mt-2 text-sm font-semibold text-slate-950">
+                        {value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ShellCard>
+
+              <ShellCard className="p-6">
+                <SectionTitle
+                  eyebrow="Proveniência"
+                  title="Fontes e confiabilidade dos dados"
+                  description="A prévia separa dado informado, dado pendente e validação necessária."
+                />
+                <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {importedSources.map((source) => (
+                    <div
+                      key={source.source}
+                      className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="font-semibold text-slate-950">
+                          {source.source}
+                        </div>
+                        <ToneBadge tone={source.tone}>{source.status}</ToneBadge>
+                      </div>
+                      <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                        Confiança: {source.confidence}
+                      </div>
+                      <div className="mt-1 text-sm leading-relaxed text-slate-600">
+                        Dados fornecidos: {source.provided}
+                      </div>
+                      <div className="mt-2 text-sm leading-relaxed text-slate-500">
+                        Próxima validação: {source.nextValidation}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {showDossierRequested ? (
+                  <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-relaxed text-emerald-800">
+                    {dossierNotice ??
+                      "Dossiê solicitado para este ativo. O pipeline abaixo mostra a simulação de coleta e validação."}
+                  </div>
+                ) : null}
+              </ShellCard>
+
+              <EvidenceDocumentsSection documents={evidenceDocuments} />
+
+              <DossierFulfillmentPanel items={dossierFulfillmentItems} compact />
+            </main>
+
+            <aside className="space-y-6 lg:sticky lg:top-8">
+              <ShellCard className="p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Tramita scorecard
+                    </div>
+                    <div className="mt-1 text-xl font-semibold tracking-tight text-slate-950">
+                      Prévia importada
+                    </div>
+                  </div>
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-white">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                </div>
+                <p className="mt-3 text-sm leading-relaxed text-slate-500">
+                  Leitura inicial baseada em dados informados. A confiança sobe com validações oficiais e comparáveis.
+                </p>
+                <div className="mt-6 space-y-5">
+                  <ScoreRow
+                    label="Fit"
+                    value={`${selectedOpportunity.fitScore}/100`}
+                    progress={selectedOpportunity.fitScore}
+                  />
+                  <ScoreRow
+                    label="Confiança"
+                    value={`${confidence}%`}
+                    progress={confidence}
+                  />
+                </div>
+                <div className="mt-6 grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <div className="text-xs uppercase tracking-[0.14em] text-amber-600">
+                      Risco
+                    </div>
+                    <div className="mt-1 font-semibold text-amber-950">
+                      {selectedOpportunity.riskLabel}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="text-xs uppercase tracking-[0.14em] text-slate-500">
+                      Dados
+                    </div>
+                    <div className="mt-1 font-semibold text-slate-950">
+                      {availabilityLabels[selectedOpportunity.dataAvailability]}
+                    </div>
+                  </div>
+                </div>
+              </ShellCard>
+
+              <ShellCard className="p-6">
+                <SectionTitle
+                  title="Dados necessários"
+                  description="Itens que transformam a prévia em análise verificável."
+                />
+                <div className="mt-5 space-y-3">
+                  {[
+                    ["Matrícula atualizada", "Alto"],
+                    ["Cadastro/IPTU municipal", "Médio"],
+                    ["Parâmetros urbanísticos", "Alto"],
+                    ["Comparáveis revisados", "Médio"],
+                  ].map(([label, impact]) => (
+                    <div
+                      key={label}
+                      className="rounded-2xl border border-slate-200 bg-white p-3"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm font-medium text-slate-950">
+                          {label}
+                        </div>
+                        <ToneBadge tone={impact === "Alto" ? "amber" : "slate"}>
+                          Impacto: {impact}
+                        </ToneBadge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ShellCard>
+
+              <ShellCard className="p-6">
+                <div className="flex gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-950">
+                      Recomendação Tramita
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                      Vale solicitar dossiê antes de avançar. A prévia indica possível encaixe com a tese, mas os principais dados ainda dependem de validação.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-5 space-y-3">
+                  <Button
+                    className="h-12 w-full rounded-2xl bg-slate-950 text-white hover:bg-slate-900"
+                    onClick={() => setDossierModalOpen(true)}
+                  >
+                    Solicitar dossiê
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                  {onBackToDiscover ? (
+                    <Button
+                      variant="outline"
+                      className="h-12 w-full rounded-2xl border-slate-200 bg-white"
+                      onClick={onBackToDiscover}
+                    >
+                      Voltar para Descobrir
+                    </Button>
+                  ) : null}
+                </div>
+              </ShellCard>
+
+              <ShellCard className="p-6">
+                <SectionTitle
+                  title="Histórico"
+                  description="Eventos relevantes da análise preliminar."
+                />
+                <div className="mt-5 space-y-4">
+                  {[
+                    ["Hoje", "Ativo importado por entrada manual, parceiro ou CSV."],
+                    ["Hoje", "Prévia criada com os dados disponíveis."],
+                    ["Pendente", "Aguardando dossiê para validação documental."],
+                  ].map(([date, text]) => (
+                    <div key={text} className="flex gap-3">
+                      <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                      <div>
+                        <div className="text-xs font-medium text-slate-500">
+                          {date}
+                        </div>
+                        <div className="mt-1 text-sm leading-relaxed text-slate-700">
+                          {text}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ShellCard>
+            </aside>
+          </div>
+        </div>
+        <DossierRequestModal
+          open={dossierModalOpen}
+          onClose={() => setDossierModalOpen(false)}
+          onConfirm={confirmDossierRequest}
+          propertyName={modalPropertyName}
+        />
+      </div>
     );
   }
 
@@ -298,6 +850,8 @@ export default function TramitaAnalyzePropertyProfile({
                 Solicitar dossiê
               </Button>
             </ShellCard>
+
+            <EvidenceDocumentsSection documents={evidenceDocuments} />
 
             <DossierFulfillmentPanel items={dossierFulfillmentItems} compact />
 
@@ -499,7 +1053,7 @@ export default function TramitaAnalyzePropertyProfile({
         open={dossierModalOpen}
         onClose={() => setDossierModalOpen(false)}
         onConfirm={confirmDossierRequest}
-        propertyName={`${tramitaMockData.dossierRequestPackage.propertyName} · ${tramitaMockData.dossierRequestPackage.propertyLocation}`}
+        propertyName={modalPropertyName}
       />
     </div>
   );

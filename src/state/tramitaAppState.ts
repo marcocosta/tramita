@@ -4,6 +4,8 @@ import type {
   ImportedOpportunityInput,
   Opportunity,
   Property,
+  PropertyEvidenceDocument,
+  PropertyEvidenceDocumentInput,
   ReportMemo,
   RiskLevel,
   Transaction,
@@ -43,6 +45,7 @@ export type TramitaAppState = {
 export const dossierRequestsStorageKey = "tramita.dossierRequests.v1";
 export const importedOpportunitiesStorageKey =
   "tramita.importedOpportunities.v1";
+export const propertyEvidenceStorageKey = "tramita.propertyEvidence.v1";
 
 const defaultOpportunity =
   tramitaMockData.discover.candidates.find((candidate) => candidate.selected) ??
@@ -134,6 +137,8 @@ export function getPropertyForOpportunityId(
   const [, neighborhoodFromTitle] = opportunity.title
     .split("·")
     .map((part) => part.trim());
+  const neighborhood =
+    opportunity.region || neighborhoodFromTitle || baseProperty.neighborhood;
   const [city, state] = opportunity.location
     .split(",")
     .map((part) => part.trim());
@@ -144,10 +149,8 @@ export function getPropertyForOpportunityId(
     title: opportunity.title,
     city: city || baseProperty.city,
     state: state || baseProperty.state,
-    neighborhood: neighborhoodFromTitle || baseProperty.neighborhood,
-    locationLabel: `${neighborhoodFromTitle || baseProperty.neighborhood}, ${
-      opportunity.location
-    }`,
+    neighborhood,
+    locationLabel: `${neighborhood}, ${opportunity.location}`,
     areaLabel: opportunity.areaLabel,
     facts: baseProperty.facts.map((fact) =>
       fact.label === "Área" ? { ...fact, value: opportunity.areaLabel } : fact,
@@ -178,6 +181,38 @@ export function saveImportedOpportunities(opportunities: Opportunity[]) {
     importedOpportunitiesStorageKey,
     JSON.stringify(opportunities),
   );
+}
+
+export function loadPropertyEvidence(): PropertyEvidenceDocument[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const stored = window.localStorage.getItem(propertyEvidenceStorageKey);
+    const parsed = stored ? JSON.parse(stored) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function savePropertyEvidence(records: PropertyEvidenceDocument[]) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(propertyEvidenceStorageKey, JSON.stringify(records));
+}
+
+export function createEvidenceDocument(
+  input: PropertyEvidenceDocumentInput,
+): PropertyEvidenceDocument {
+  return {
+    ...input,
+    id: `evidence-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    uploadedAt: new Date().toISOString(),
+  };
 }
 
 function formatArea(areaM2: number) {

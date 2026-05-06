@@ -15,7 +15,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { tramitaMockData } from "./data/tramitaMockData";
-import type { Property, ReportMemo } from "./types/tramita";
+import type {
+  Property,
+  PropertyEvidenceDocument,
+  ReportMemo,
+} from "./types/tramita";
 
 const defaultReportMemo = tramitaMockData.reportMemo;
 const defaultSelectedProperty = tramitaMockData.selectedProperty;
@@ -161,12 +165,16 @@ function ReadinessRow({
 }
 
 type InvestorMemoReportProps = {
+  evidenceDocuments?: PropertyEvidenceDocument[];
   onOpenTransaction?: () => void;
   reportMemo?: ReportMemo;
   selectedProperty?: Property;
 };
 
+// TODO: generate imported opportunity memo dynamically from selectedOpportunity.
+
 export default function InvestorMemoReport({
+  evidenceDocuments = [],
   onOpenTransaction,
   reportMemo = defaultReportMemo,
   selectedProperty = defaultSelectedProperty,
@@ -193,6 +201,11 @@ export default function InvestorMemoReport({
   const dataReliability = reportMemo.dataReliability.map(
     ({ label, value }) => [label, value] as const,
   );
+  const evidenceStats = {
+    attached: evidenceDocuments.length,
+    validated: evidenceDocuments.filter((document) => document.status === "validated")
+      .length,
+  };
   const pendingSources = reportMemo.pendingSources;
 
   async function handleShareMemo() {
@@ -284,6 +297,24 @@ export default function InvestorMemoReport({
                   <div
                     key={label}
                     className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4"
+                  >
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      {label}
+                    </div>
+                    <div className="mt-2 text-xl font-semibold text-slate-950">
+                      {value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2">
+                {[
+                  ["Evidências anexadas", evidenceStats.attached],
+                  ["Validadas", evidenceStats.validated],
+                ].map(([label, value]) => (
+                  <div
+                    className="rounded-2xl border border-slate-200 bg-white p-4"
+                    key={label}
                   >
                     <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
                       {label}

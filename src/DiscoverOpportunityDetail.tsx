@@ -269,27 +269,6 @@ export default function DiscoverOpportunityDetail({
     candidates.find((candidate) => candidate.selected) ??
     candidateOptions.find((candidate) => candidate.id === selectedOpportunityId) ??
     candidateOptions[0];
-  const filters = [
-    { label: "País", value: "Brasil" },
-    { label: "Estado", value: appliedFilters.state },
-    { label: "Cidade", value: appliedFilters.city },
-    { label: "Região", value: appliedFilters.region },
-    { label: "Tipo", value: appliedFilters.assetType },
-    {
-      label: "Área",
-      value: `${appliedFilters.areaMin || "0"}–${appliedFilters.areaMax || "∞"} m²`,
-    },
-    { label: "Uso alvo", value: appliedFilters.targetUse },
-    {
-      label: "Dados",
-      value:
-        appliedFilters.dataAvailability === "Todas"
-          ? "Todas"
-          : dataAvailabilityLabels[
-              appliedFilters.dataAvailability as Opportunity["dataAvailability"]
-            ],
-    },
-  ].map(({ label, value }) => [label, value] as const);
   const stateOptions = getUniqueOptions(candidateOptions.map((item) => item.state));
   const cityOptions = getUniqueOptions(
     candidateOptions
@@ -555,21 +534,6 @@ export default function DiscoverOpportunityDetail({
                         />
                       </label>
                     </div>
-                    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      {filters.map(([label, value]) => (
-                        <div
-                          key={label}
-                          className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5"
-                        >
-                          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                            {label}
-                          </div>
-                          <div className="mt-2 text-sm font-semibold text-slate-950">
-                            {value}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     {dynamicThesisMetrics.map(([label, value]) => (
@@ -659,7 +623,7 @@ export default function DiscoverOpportunityDetail({
                             {item.title}
                           </div>
                           <div className="mt-1 text-sm text-slate-500">
-                            {item.location} · {item.areaLabel}
+                            {item.region} · {item.location} · {item.areaLabel}
                           </div>
                         </div>
                       </div>
@@ -1011,6 +975,9 @@ export default function DiscoverOpportunityDetail({
                       {selectedCandidate?.title ?? "Terreno · Meireles"}
                     </div>
                     <div className="mt-1 text-sm text-slate-500">
+                      {selectedCandidate?.region
+                        ? `${selectedCandidate.region} · `
+                        : ""}
                       {selectedCandidate?.areaLabel ?? "1.240 m²"} ·{" "}
                       {selectedCandidate?.location ?? "Fortaleza, CE"}
                     </div>

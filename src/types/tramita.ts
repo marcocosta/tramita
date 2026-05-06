@@ -135,6 +135,36 @@ export type ImportedOpportunityInput = {
   notes?: string;
 };
 
+export type PropertyEvidenceDocument = {
+  id: string;
+  propertyId: string;
+  title: string;
+  documentType:
+    | "matricula"
+    | "iptu"
+    | "cadastro_municipal"
+    | "plano_diretor"
+    | "certidao"
+    | "contrato"
+    | "foto"
+    | "mapa"
+    | "laudo"
+    | "outro";
+  sourceType: SourceType;
+  sourceLabel: string;
+  status: "uploaded" | "pending_review" | "validated" | "rejected" | "expired";
+  confidence: "low" | "medium" | "high" | "unknown";
+  fileName?: string;
+  notes?: string;
+  uploadedAt: string;
+  unlocks: string[];
+};
+
+export type PropertyEvidenceDocumentInput = Omit<
+  PropertyEvidenceDocument,
+  "id" | "uploadedAt"
+>;
+
 export type AnalysisSummary = {
   propertyId: string;
   estimatedValueRange: string;

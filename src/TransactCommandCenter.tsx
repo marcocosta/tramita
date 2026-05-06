@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { tramitaMockData } from "./data/tramitaMockData";
+import type { PropertyEvidenceDocument } from "./types/tramita";
 
 const transaction = tramitaMockData.transaction;
 const transactionMainBlocker =
@@ -217,6 +218,7 @@ const activity = [
 ];
 
 type TransactCommandCenterProps = {
+  evidenceDocuments?: PropertyEvidenceDocument[];
   transactionData?: typeof transaction;
 };
 
@@ -307,9 +309,18 @@ function ScoreRow({
 }
 
 export default function TransactCommandCenter({
+  evidenceDocuments = [],
   transactionData,
 }: TransactCommandCenterProps) {
   const activeTransaction = transactionData ?? transaction;
+  const evidenceStats = {
+    attached: evidenceDocuments.length,
+    pendingReview: evidenceDocuments.filter(
+      (document) => document.status === "pending_review",
+    ).length,
+    validated: evidenceDocuments.filter((document) => document.status === "validated")
+      .length,
+  };
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.07),_transparent_30%),linear-gradient(180deg,_#f8fafc_0%,_#eef2f7_100%)] px-4 py-4 md:px-8 md:py-6">
@@ -558,6 +569,26 @@ export default function TransactCommandCenter({
                 title="Prontidão documental"
                 description="Evidências por grupo, dono e status."
               />
+
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {[
+                  ["Evidências anexadas", evidenceStats.attached],
+                  ["Pendentes de revisão", evidenceStats.pendingReview],
+                  ["Validadas", evidenceStats.validated],
+                ].map(([label, value]) => (
+                  <div
+                    className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3"
+                    key={label}
+                  >
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      {label}
+                    </div>
+                    <div className="mt-1 text-lg font-semibold text-slate-950">
+                      {value}
+                    </div>
+                  </div>
+                ))}
+              </div>
 
               <div className="mt-5 space-y-3">
                 {docs.map((doc) => (

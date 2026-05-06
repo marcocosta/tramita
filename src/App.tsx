@@ -19,6 +19,7 @@ import PropertyIntakeScreen from "./PropertyIntakeScreen";
 import { tramitaMockData } from "./data/tramitaMockData";
 import {
   createOpportunityFromInput,
+  createEvidenceDocument,
   dossierRequestsStorageKey,
   getPropertyForOpportunityId,
   getSelectedAnalysisSummary,
@@ -27,15 +28,22 @@ import {
   initialTramitaAppState,
   isDossierRequested,
   loadImportedOpportunities,
+  loadPropertyEvidence,
   markDossierRequested,
   saveImportedOpportunities,
+  savePropertyEvidence,
   selectOpportunity,
   updateSearchThesis,
   type ActiveScreen,
   type DossierRequestStatusByPropertyId,
   type TramitaAppState,
 } from "./state/tramitaAppState";
-import type { ImportedOpportunityInput, Opportunity } from "./types/tramita";
+import type {
+  ImportedOpportunityInput,
+  Opportunity,
+  PropertyEvidenceDocument,
+  PropertyEvidenceDocumentInput,
+} from "./types/tramita";
 
 const validScreens: ActiveScreen[] = [
   "home",
@@ -135,11 +143,17 @@ export default function App() {
   const [importedOpportunities, setImportedOpportunities] = useState<
     Opportunity[]
   >(loadImportedOpportunities);
+  const [propertyEvidenceDocuments, setPropertyEvidenceDocuments] = useState<
+    PropertyEvidenceDocument[]
+  >(loadPropertyEvidence);
 
   const allDiscoverOpportunities = [
     ...tramitaMockData.discover.candidates,
     ...importedOpportunities,
   ];
+  const selectedOpportunity = allDiscoverOpportunities.find(
+    (opportunity) => opportunity.id === appState.selectedOpportunityId,
+  );
   const selectedProperty = getPropertyForOpportunityId(
     appState.selectedOpportunityId,
     allDiscoverOpportunities,
@@ -154,6 +168,9 @@ export default function App() {
   const selectedDossierRequested = isDossierRequested(
     appState.dossierRequestStatusByPropertyId,
     selectedProperty.id,
+  );
+  const selectedPropertyEvidenceDocuments = propertyEvidenceDocuments.filter(
+    (document) => document.propertyId === selectedProperty.id,
   );
 
   function navigateTo(screen: ActiveScreen) {
@@ -209,6 +226,11 @@ export default function App() {
     saveImportedOpportunities(opportunities);
   }
 
+  function persistPropertyEvidence(documents: PropertyEvidenceDocument[]) {
+    setPropertyEvidenceDocuments(documents);
+    savePropertyEvidence(documents);
+  }
+
   function handleAddImportedOpportunity(input: ImportedOpportunityInput) {
     const opportunity = createOpportunityFromInput(input);
     const nextOpportunities = [opportunity, ...importedOpportunities];
@@ -247,6 +269,13 @@ export default function App() {
     navigateTo("discover");
   }
 
+  function handleAddEvidenceDocument(input: PropertyEvidenceDocumentInput) {
+    persistPropertyEvidence([
+      createEvidenceDocument(input),
+      ...propertyEvidenceDocuments,
+    ]);
+  }
+
   useEffect(() => {
     function handleHashChange() {
       setActive(screenFromHash(window.location.hash) ?? "home");
@@ -259,23 +288,23 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-100">
       <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[1480px] flex-col gap-3 px-4 py-2 md:px-8 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mx-auto flex max-w-[1480px] flex-col gap-3 px-4 py-3 md:px-8 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-950 text-sm font-semibold text-white shadow-sm">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-sm font-semibold text-white shadow-sm">
               T
             </div>
             <div>
-              <div className="text-base font-semibold tracking-tight text-slate-950">
+              <div className="text-lg font-semibold tracking-tight text-slate-950">
                 Tramita
               </div>
-              <div className="text-sm text-slate-500">
+              <div className="text-sm leading-snug text-slate-500">
                 Plataforma de inteligência imobiliária
               </div>
             </div>
           </div>
 
           <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="flex max-w-full gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50 p-1 shadow-sm">
+            <div className="flex max-w-full gap-1.5 overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50 p-1.5 shadow-sm">
               {navItems.map((item) => {
                 const selected = active === item.key;
 
@@ -283,16 +312,16 @@ export default function App() {
                   <button
                     key={item.key}
                     onClick={() => navigateTo(item.key)}
-                    className={`min-w-[112px] rounded-xl px-3 py-1.5 text-left transition ${
+                    className={`min-w-[122px] rounded-xl px-3.5 py-2 text-left transition ${
                       selected
                         ? "bg-slate-950 text-white shadow-sm"
                         : "text-slate-600 hover:bg-white hover:text-slate-950"
                     }`}
                     type="button"
                   >
-                    <div className="text-sm font-semibold">{item.label}</div>
+                    <div className="text-[15px] font-semibold leading-tight">{item.label}</div>
                     <div
-                      className={`mt-0.5 text-xs ${
+                      className={`mt-1 text-[12px] leading-tight ${
                         selected ? "text-slate-300" : "text-slate-500"
                       }`}
                     >
@@ -306,7 +335,7 @@ export default function App() {
         </div>
 
         <div className="border-t border-slate-200/70 bg-white/70">
-          <div className="mx-auto flex max-w-[1480px] items-center gap-2 overflow-x-auto px-4 py-1.5 text-sm md:px-8">
+          <div className="mx-auto flex max-w-[1480px] items-center gap-2 overflow-x-auto px-4 py-2 text-sm md:px-8">
             <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-600 shadow-sm">
               <Radar className="h-4 w-4" />
               <button
@@ -385,7 +414,9 @@ export default function App() {
         )}
         {active === "intake" && (
           <PropertyIntakeScreen
+            evidenceDocuments={propertyEvidenceDocuments}
             importedOpportunities={importedOpportunities}
+            onAddEvidenceDocument={handleAddEvidenceDocument}
             onAddOpportunity={handleAddImportedOpportunity}
             onGoDiscover={handleGoDiscover}
             onImportOpportunities={handleImportOpportunities}
@@ -409,16 +440,23 @@ export default function App() {
           <AnalyzePropertyProfile
             analysisSummary={selectedAnalysisSummary}
             dossierRequested={selectedDossierRequested}
+            evidenceDocuments={selectedPropertyEvidenceDocuments}
             onRequestDossier={handleRequestDossier}
             onStartDueDiligence={() => navigateTo("transact")}
+            onBackToDiscover={() => navigateTo("discover")}
+            selectedOpportunity={selectedOpportunity}
             selectedProperty={selectedProperty}
           />
         )}
         {active === "transact" && (
-          <TransactCommandCenter transactionData={selectedTransaction} />
+          <TransactCommandCenter
+            evidenceDocuments={selectedPropertyEvidenceDocuments}
+            transactionData={selectedTransaction}
+          />
         )}
         {active === "reports" && (
           <InvestorMemoReport
+            evidenceDocuments={selectedPropertyEvidenceDocuments}
             onOpenTransaction={() => navigateTo("transact")}
             reportMemo={selectedReportMemo}
             selectedProperty={selectedProperty}
