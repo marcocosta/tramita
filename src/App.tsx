@@ -17,9 +17,17 @@ import OperationsConsole from "./OperationsConsole";
 import PricingModelScreen from "./PricingModelScreen";
 import PropertyIntakeScreen from "./PropertyIntakeScreen";
 import { tramitaMockData } from "./data/tramitaMockData";
+import { isSupabaseConfigured } from "./lib/supabaseClient";
 import {
-  createOpportunityFromInput,
-  createEvidenceDocument,
+  loadDossierRequests as loadRepositoryDossierRequests,
+  loadEvidenceDocuments as loadRepositoryEvidenceDocuments,
+  loadImportedOpportunities as loadRepositoryImportedOpportunities,
+  saveDossierRequest,
+  saveEvidenceDocument,
+  saveImportedOpportunity,
+  saveImportedOpportunitiesBatch,
+} from "./services/tramitaRepository";
+import {
   dossierRequestsStorageKey,
   getPropertyForOpportunityId,
   getSelectedAnalysisSummary,
@@ -27,11 +35,9 @@ import {
   getSelectedTransaction,
   initialTramitaAppState,
   isDossierRequested,
-  loadImportedOpportunities,
-  loadPropertyEvidence,
+  loadImportedOpportunities as loadLocalImportedOpportunities,
+  loadPropertyEvidence as loadLocalPropertyEvidence,
   markDossierRequested,
-  saveImportedOpportunities,
-  savePropertyEvidence,
   selectOpportunity,
   updateSearchThesis,
   type ActiveScreen,
@@ -142,10 +148,10 @@ export default function App() {
     useState<TramitaAppState>(getInitialAppState);
   const [importedOpportunities, setImportedOpportunities] = useState<
     Opportunity[]
-  >(loadImportedOpportunities);
+  >(loadLocalImportedOpportunities);
   const [propertyEvidenceDocuments, setPropertyEvidenceDocuments] = useState<
     PropertyEvidenceDocument[]
-  >(loadPropertyEvidence);
+  >(loadLocalPropertyEvidence);
 
   const allDiscoverOpportunities = [
     ...tramitaMockData.discover.candidates,
@@ -219,23 +225,22 @@ export default function App() {
 
       return nextState;
     });
+
+    const opportunity = opportunityId
+      ? allDiscoverOpportunities.find((item) => item.id === opportunityId)
+      : selectedOpportunity;
+
+    void saveDossierRequest({
+      propertyId,
+      propertyTitle: opportunity?.title ?? selectedProperty.title,
+    }).catch(() => undefined);
   }
 
-  function persistImportedOpportunities(opportunities: Opportunity[]) {
-    setImportedOpportunities(opportunities);
-    saveImportedOpportunities(opportunities);
-  }
-
-  function persistPropertyEvidence(documents: PropertyEvidenceDocument[]) {
-    setPropertyEvidenceDocuments(documents);
-    savePropertyEvidence(documents);
-  }
-
-  function handleAddImportedOpportunity(input: ImportedOpportunityInput) {
-    const opportunity = createOpportunityFromInput(input);
+  async function handleAddImportedOpportunity(input: ImportedOpportunityInput) {
+    const opportunity = await saveImportedOpportunity(input);
     const nextOpportunities = [opportunity, ...importedOpportunities];
 
-    persistImportedOpportunities(nextOpportunities);
+    setImportedOpportunities(nextOpportunities);
     setAppState((current) =>
       selectOpportunity(current, opportunity.id, [
         ...tramitaMockData.discover.candidates,
@@ -244,11 +249,11 @@ export default function App() {
     );
   }
 
-  function handleImportOpportunities(inputs: ImportedOpportunityInput[]) {
-    const opportunities = inputs.map((input) => createOpportunityFromInput(input));
+  async function handleImportOpportunities(inputs: ImportedOpportunityInput[]) {
+    const opportunities = await saveImportedOpportunitiesBatch(inputs);
     const nextOpportunities = [...opportunities, ...importedOpportunities];
 
-    persistImportedOpportunities(nextOpportunities);
+    setImportedOpportunities(nextOpportunities);
     if (opportunities[0]) {
       setAppState((current) =>
         selectOpportunity(current, opportunities[0].id, [
@@ -269,12 +274,43 @@ export default function App() {
     navigateTo("discover");
   }
 
-  function handleAddEvidenceDocument(input: PropertyEvidenceDocumentInput) {
-    persistPropertyEvidence([
-      createEvidenceDocument(input),
-      ...propertyEvidenceDocuments,
-    ]);
+  async function handleAddEvidenceDocument(input: PropertyEvidenceDocumentInput) {
+    const document = await saveEvidenceDocument(input);
+    setPropertyEvidenceDocuments([document, ...propertyEvidenceDocuments]);
   }
+
+  useEffect(() => {
+    let canceled = false;
+
+    async function loadRepositoryState() {
+      const [opportunities, evidenceDocuments, dossierRequests] =
+        await Promise.all([
+          loadRepositoryImportedOpportunities(),
+          loadRepositoryEvidenceDocuments(),
+          loadRepositoryDossierRequests(),
+        ]);
+
+      if (canceled) {
+        return;
+      }
+
+      setImportedOpportunities(opportunities);
+      setPropertyEvidenceDocuments(evidenceDocuments);
+      setAppState((current) => ({
+        ...current,
+        dossierRequestStatusByPropertyId: {
+          ...current.dossierRequestStatusByPropertyId,
+          ...dossierRequests,
+        },
+      }));
+    }
+
+    void loadRepositoryState();
+
+    return () => {
+      canceled = true;
+    };
+  }, []);
 
   useEffect(() => {
     function handleHashChange() {
@@ -395,6 +431,15 @@ export default function App() {
             </div>
 
             <div className="ml-auto hidden items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500 md:flex">
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  isSupabaseConfigured ? "bg-emerald-500" : "bg-slate-400"
+                }`}
+              />
+              {isSupabaseConfigured ? "Supabase conectado" : "Modo local"}
+            </div>
+
+            <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-500 md:flex">
               <Building2 className="h-4 w-4" />
               Fluxo piloto Fortaleza
             </div>

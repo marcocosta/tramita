@@ -215,8 +215,9 @@ export default function OpportunityMap({
                   </div>
                 </Tooltip>
               ) : null}
-              <Popup>
-                <div className="min-w-[210px] space-y-2.5 font-sans">
+              {!selected ? (
+                <Popup>
+                <div className="min-w-[190px] space-y-2 font-sans">
                   <div>
                     <div className="text-sm font-semibold text-slate-950">
                       {opportunity.title}
@@ -225,9 +226,8 @@ export default function OpportunityMap({
                       {opportunity.region} · {opportunity.city}
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="grid grid-cols-2 gap-1.5 text-xs">
                     {[
-                      ["Área", opportunity.areaLabel],
                       ["Fit", `${opportunity.fitScore}/100`],
                       [
                         "Dados",
@@ -239,7 +239,7 @@ export default function OpportunityMap({
                       ],
                     ].map(([label, value]) => (
                       <div
-                        className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5"
+                        className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1"
                         key={label}
                       >
                         <div className="text-slate-500">{label}</div>
@@ -251,15 +251,11 @@ export default function OpportunityMap({
                   </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <button
-                      className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${
-                        selected
-                          ? "bg-slate-200 text-slate-700"
-                          : "bg-slate-950 text-white hover:bg-slate-800"
-                      }`}
+                      className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
                       onClick={() => onSelectOpportunity?.(opportunity.id)}
                       type="button"
                     >
-                      {selected ? "Selecionado" : "Selecionar"}
+                      Selecionar
                     </button>
                     <button
                       className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
@@ -270,24 +266,24 @@ export default function OpportunityMap({
                     </button>
                   </div>
                 </div>
-              </Popup>
+                </Popup>
+              ) : null}
             </Marker>
           );
         })}
       </MapContainer>
 
-      <div className="pointer-events-none absolute right-3 top-3 z-[500] w-[180px] rounded-2xl border border-white/70 bg-white/90 p-2.5 text-[11px] text-slate-600 shadow-lg backdrop-blur">
-        <div className="font-semibold text-slate-950">Mapa de oportunidades</div>
-        <div className="mt-1.5 space-y-1">
+      <div className="pointer-events-none absolute bottom-3 right-3 z-[500] w-[150px] rounded-2xl border border-white/70 bg-white/88 p-2 text-[10px] text-slate-600 shadow-lg backdrop-blur">
+        <div className="font-semibold text-slate-950">Legenda</div>
+        <div className="mt-1 space-y-1">
           <div className="flex items-center gap-2">
-            <span className="h-3.5 w-3.5 rounded-full border-2 border-amber-500 bg-slate-950 shadow-sm" />
+            <span className="h-3 w-3 rounded-full border-2 border-amber-500 bg-slate-950 shadow-sm" />
             oportunidade
           </div>
           <div className="flex items-center gap-2">
-            <span className="h-3.5 w-3.5 rounded-full border-2 border-emerald-500 bg-slate-950 shadow-[0_0_0_3px_rgba(16,185,129,0.22)]" />
+            <span className="h-3 w-3 rounded-full border-2 border-emerald-500 bg-slate-950 shadow-[0_0_0_3px_rgba(16,185,129,0.22)]" />
             selecionada
           </div>
-          <div className="text-slate-500">Clique no marcador para selecionar.</div>
         </div>
       </div>
 

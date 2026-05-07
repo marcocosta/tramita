@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   AlertTriangle,
-  ArrowRight,
   BookmarkPlus,
   Building2,
   CheckCircle2,
@@ -17,7 +16,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import DossierFulfillmentPanel from "./components/DossierFulfillmentPanel";
 import DossierRequestModal from "./components/DossierRequestModal";
 import OpportunityMap from "./components/OpportunityMap";
 import { tramitaMockData } from "./data/tramitaMockData";
@@ -302,16 +300,14 @@ function OpportunityCardHero({
   const sourceLabel = opportunity.sourceLabel ?? opportunity.primarySourceLabel;
 
   return (
-    <div
-      className={`relative overflow-hidden rounded-[18px] border p-2.5 ${tone.surface}`}
-    >
-      <div className="absolute inset-x-4 top-4 h-px bg-slate-300/35" />
-      <div className="absolute inset-y-3 left-8 w-px bg-slate-300/25" />
+    <div className="relative min-w-0 overflow-hidden px-1 py-0.5">
+      <div className="absolute right-0 top-3 h-px w-28 bg-slate-300/25" />
+      <div className="absolute right-12 top-0 h-20 w-px bg-slate-300/20" />
       <div
-        className={`absolute right-2 top-2 h-8 w-14 rotate-[-8deg] rounded-[12px] border ${tone.line}`}
+        className={`absolute right-2 top-1 h-8 w-14 rotate-[-8deg] rounded-[12px] border opacity-60 ${tone.line}`}
       />
       <div
-        className={`absolute bottom-2 right-8 h-7 w-12 rotate-[7deg] rounded-[10px] border ${tone.line}`}
+        className={`absolute right-14 top-9 h-7 w-12 rotate-[7deg] rounded-[10px] border opacity-50 ${tone.line}`}
       />
 
       <div className="relative flex min-w-0 items-start gap-2.5">
@@ -321,21 +317,23 @@ function OpportunityCardHero({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">
             <span>{opportunity.id}</span>
-            {selected ? (
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-[0] text-emerald-700">
-                Selecionado
-              </span>
-            ) : null}
             {opportunity.imported ? (
               <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[10px] font-semibold normal-case tracking-[0] text-blue-700">
                 Importado
               </span>
             ) : null}
           </div>
-          <div className="mt-0.5 text-base font-semibold leading-snug tracking-tight text-slate-950">
-            {opportunity.title}
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <div className="text-lg font-semibold leading-snug tracking-tight text-slate-950">
+              {opportunity.title}
+            </div>
+            {selected ? (
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                Selecionado
+              </span>
+            ) : null}
           </div>
-          <div className="mt-0.5 text-sm leading-snug text-slate-500">
+          <div className="mt-0.5 text-sm font-medium leading-snug text-slate-600">
             {opportunity.region} · {opportunity.city} · {opportunity.areaLabel}
           </div>
         </div>
@@ -468,8 +466,20 @@ export default function DiscoverOpportunityDetail({
       dossierRequestStatusByPropertyId[selectedCandidate.propertyId] ===
         "requested",
   );
-  const showDossierPipeline =
+  const showDossierSummary =
     selectedDossierRequested || Boolean(dossierNotice);
+  const activeDossierItems = dossierFulfillmentItems.filter((item) =>
+    ["requested", "collecting", "validating"].includes(item.status),
+  );
+  const deliveredDossierItems = dossierFulfillmentItems.filter(
+    (item) => item.status === "delivered",
+  );
+  const highImpactDossierItems = dossierFulfillmentItems.filter(
+    (item) => item.confidenceImpact === "high",
+  );
+  const nextDossierItem =
+    dossierFulfillmentItems.find((item) => item.status !== "delivered") ??
+    dossierFulfillmentItems[0];
   const selectedOpportunityName =
     selectedCandidate?.title.split("·").pop()?.trim() ??
     selectedCandidate?.title ??
@@ -595,7 +605,7 @@ export default function DiscoverOpportunityDetail({
         </ShellCard>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <main className="space-y-6">
+          <main className="space-y-5">
             <ShellCard className="overflow-hidden">
               <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr]">
                 <div className="flex flex-col justify-between gap-4 p-4 md:p-5">
@@ -744,9 +754,9 @@ export default function DiscoverOpportunityDetail({
                   return (
                     <div
                       key={item.id}
-                      className={`cursor-pointer rounded-[24px] border p-2.5 transition ${
+                      className={`cursor-pointer rounded-[24px] border px-3 py-3 transition ${
                         item.selected
-                          ? "border-slate-950 bg-slate-50/80 shadow-[0_12px_30px_rgba(15,23,42,0.11)]"
+                          ? "border-emerald-300 bg-emerald-50/35 shadow-[0_12px_30px_rgba(15,23,42,0.10)]"
                           : "border-slate-200 bg-white/95 hover:border-slate-300 hover:bg-white"
                       }`}
                       onClick={() => selectCandidate(item.id)}
@@ -759,14 +769,14 @@ export default function DiscoverOpportunityDetail({
                       role="button"
                       tabIndex={0}
                     >
-                      <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[1fr_0.78fr] xl:grid-cols-[1.08fr_230px_0.92fr] xl:items-center">
+                      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_0.72fr] xl:grid-cols-[minmax(0,1.12fr)_210px_minmax(0,0.92fr)] xl:items-center xl:gap-0">
                         <OpportunityCardHero
                           opportunity={item}
                           rank={index + 1}
                           selected={item.selected}
                         />
 
-                        <div className="flex min-w-0 flex-col justify-center rounded-[18px] border border-slate-200 bg-slate-50/70 p-2.5">
+                        <div className="flex min-w-0 flex-col justify-center xl:border-l xl:border-slate-200/80 xl:pl-4 xl:pr-4">
                           <div className="mb-2 flex items-center justify-between gap-3">
                             <span className="text-sm text-slate-500">Fit</span>
                             <span className="text-sm font-semibold text-slate-950">
@@ -798,7 +808,7 @@ export default function DiscoverOpportunityDetail({
                           </div>
                         </div>
 
-                        <div className="min-w-0 rounded-[18px] border border-slate-200 bg-white p-2.5 lg:col-span-2 xl:col-span-1">
+                        <div className="min-w-0 lg:col-span-2 xl:col-span-1 xl:border-l xl:border-slate-200/80 xl:pl-4">
                           <div className="flex flex-wrap items-start justify-between gap-2">
                             <div>
                               <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
@@ -996,34 +1006,6 @@ export default function DiscoverOpportunityDetail({
           </main>
 
           <aside className="space-y-6 lg:sticky lg:top-8">
-            {dossierNotice ? (
-              <ShellCard className="border-emerald-200 bg-emerald-50/90 p-4 shadow-sm">
-                <div className="text-sm font-semibold text-emerald-950">
-                  Dossiê solicitado
-                </div>
-                <div className="mt-1 text-sm leading-relaxed text-emerald-800">
-                  {dossierNotice}
-                </div>
-              </ShellCard>
-            ) : null}
-
-            {showDossierPipeline ? (
-              <DossierFulfillmentPanel items={dossierFulfillmentItems} compact />
-            ) : (
-              <ShellCard className="p-5">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  Pipeline do dossiê
-                </div>
-                <div className="mt-1 font-semibold text-slate-950">
-                  Coleta e validação sob demanda
-                </div>
-                <p className="mt-2 text-sm leading-relaxed text-slate-500">
-                  Solicite o dossiê para acompanhar coleta, validação e entrega
-                  dos dados.
-                </p>
-              </ShellCard>
-            )}
-
             <ShellCard className="p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -1073,51 +1055,21 @@ export default function DiscoverOpportunityDetail({
               </div>
             </ShellCard>
 
-            <ShellCard className="p-6">
-              <SectionTitle
-                title="Modelo de dados"
-                description="Como a oportunidade evolui de prévia gratuita para dossiê verificável."
-              />
-              <div className="mt-5 space-y-3">
-                {[
-                  "Prévia gratuita",
-                  "Dossiê sob demanda",
-                  "Dados verificados quando disponíveis",
-                  "Estimativas sinalizadas",
-                ].map((item) => (
-                  <div
-                    key={item}
-                    className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm font-medium text-slate-700"
-                  >
-                    {item}
-                  </div>
-                ))}
-              </div>
-              <Button
-                variant="outline"
-                className="mt-5 h-12 w-full rounded-2xl border-slate-200 bg-white"
-                onClick={() => openDossierModal()}
-                type="button"
-              >
-                Solicitar dossiê do imóvel
-              </Button>
-            </ShellCard>
-
-            <ShellCard className="p-6">
+            <ShellCard className="p-5">
               <SectionTitle
                 title="Oportunidade selecionada"
                 description="Resumo do ativo com maior encaixe na tese."
               />
-              <div className="mt-5 rounded-[26px] border border-slate-200 bg-slate-50/70 p-5">
+              <div className="mt-4 rounded-[22px] border border-slate-200 bg-slate-50/70 p-4">
                 <div className="flex gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-950 text-white">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-950 text-white">
                     <LandPlot className="h-5 w-5" />
                   </div>
                   <div>
                     <div className="font-semibold text-slate-950">
                       {selectedCandidate?.title ?? "Terreno · Meireles"}
                     </div>
-                    <div className="mt-1 text-sm text-slate-500">
+                    <div className="mt-1 text-sm leading-snug text-slate-500">
                       {selectedCandidate?.region
                         ? `${selectedCandidate.region} · `
                         : ""}
@@ -1126,24 +1078,120 @@ export default function DiscoverOpportunityDetail({
                     </div>
                   </div>
                 </div>
-                <div className="mt-5 space-y-3">
+                <div className="mt-4 grid grid-cols-2 gap-2">
                   <Button
-                    className="h-12 w-full rounded-2xl bg-slate-950 text-white hover:bg-slate-900"
+                    className="h-10 rounded-2xl bg-slate-950 text-white hover:bg-slate-900"
                     onClick={() => onAnalyze?.(selectedCandidate?.id)}
                     type="button"
                   >
-                    Analisar este ativo
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    Analisar
                   </Button>
                   <Button
                     variant="outline"
-                    className="h-12 w-full rounded-2xl border-slate-200 bg-white"
+                    className="h-10 rounded-2xl border-slate-200 bg-white"
                   >
-                    <BookmarkPlus className="mr-2 h-4 w-4" />
-                    Salvar no pipeline
+                    Salvar
                   </Button>
                 </div>
               </div>
+            </ShellCard>
+
+            <ShellCard
+              className={`p-5 ${
+                showDossierSummary
+                  ? "border-emerald-200 bg-emerald-50/70"
+                  : ""
+              }`}
+            >
+              {showDossierSummary ? (
+                <>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                    Dossiê / modelo de dados
+                  </div>
+                  <div className="mt-1 text-lg font-semibold tracking-tight text-slate-950">
+                    Dossiê solicitado
+                  </div>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                    Coleta e validação em andamento.
+                  </p>
+                  {dossierNotice ? (
+                    <div className="mt-3 rounded-2xl border border-emerald-200 bg-white/70 px-3 py-2 text-xs leading-relaxed text-emerald-800">
+                      {dossierNotice}
+                    </div>
+                  ) : null}
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    {[
+                      ["Itens", dossierFulfillmentItems.length],
+                      ["Em andamento", activeDossierItems.length],
+                      ["Entregues", deliveredDossierItems.length],
+                      ["Impacto alto", highImpactDossierItems.length],
+                    ].map(([label, value]) => (
+                      <div
+                        key={label}
+                        className="rounded-2xl border border-white/80 bg-white/78 px-3 py-2"
+                      >
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                          {label}
+                        </div>
+                        <div className="mt-1 text-lg font-semibold text-slate-950">
+                          {value}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 rounded-2xl border border-emerald-200 bg-white/78 px-3 py-2">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-700">
+                      Próxima etapa
+                    </div>
+                    <div className="mt-1 text-sm font-semibold text-slate-950">
+                      {nextDossierItem?.label ?? "Acompanhar coleta"}
+                    </div>
+                  </div>
+                  <Button
+                    className="mt-4 h-10 w-full rounded-2xl bg-slate-950 text-white hover:bg-slate-900"
+                    onClick={() => onAnalyze?.(selectedCandidate?.id)}
+                    type="button"
+                  >
+                    Ver em Analisar
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    Pipeline do dossiê
+                  </div>
+                  <div className="mt-1 font-semibold text-slate-950">
+                    Coleta e validação sob demanda
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                    Solicite o dossiê para acompanhar coleta, validação e entrega
+                    dos dados.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {[
+                      "Prévia gratuita",
+                      "Dossiê sob demanda",
+                      "Dados verificados",
+                      "Estimativas sinalizadas",
+                    ].map((item) => (
+                      <span
+                        key={item}
+                        className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700"
+                      >
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="mt-4 h-10 w-full rounded-2xl border-slate-200 bg-white"
+                    onClick={() => openDossierModal()}
+                    type="button"
+                  >
+                    Solicitar dossiê do imóvel
+                  </Button>
+                </>
+              )}
             </ShellCard>
 
             <ShellCard className="p-5 md:p-6">
